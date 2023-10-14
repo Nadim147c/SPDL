@@ -1,9 +1,9 @@
 import axios from "axios"
-import { readFile, writeFile } from "fs/promises"
 import { Buffer } from "node:buffer"
 import { ClientCredentials, ClientCredentialsResponse, ClientCredentialsSchema } from "../models/SpotifyAuthorization"
 import { SpotifyTrackSchema } from "../models/SpotifyTrack"
 import { loadCache, saveCache } from "../util/Util"
+import { SpotifyPlaylistSchema } from "../models/SpotifyPlaylists"
 
 export default class Spotify {
     baseApiURI = "https://api.spotify.com/"
@@ -89,8 +89,10 @@ export default class Spotify {
 
         const response = await axios.get(url.toString(), { headers })
 
-        await saveCache(response.data, "playlist", URI)
+        const playlist = SpotifyPlaylistSchema.parse(response.data)
 
-        return response.data
+        await saveCache(playlist, "playlist", URI)
+
+        return playlist
     }
 }
