@@ -1,11 +1,22 @@
+import axios from "axios"
 import { execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
+import { Promise as NodeId3, TagConstants, Tags } from "node-id3"
 import { SpotifyPlaylistTrack } from "../models/SpotifyPlaylists"
 import { SpotifyTrack } from "../models/SpotifyTrack"
+import { loadCache, saveCache } from "../util/Util"
 
 interface DownloadAudioOptions {
     track: SpotifyTrack | SpotifyPlaylistTrack
     playlist?: string
+}
+
+interface EditMetadataOptions {
+    path: string
+    title: string
+    artists: string[]
+    album: string
+    cover: string
 }
 
 export default class Downloader {
@@ -48,8 +59,7 @@ export default class Downloader {
         ]
 
         return new Promise((resolve, reject) => {
-            const progressRegex =
-                /\[download\] *(.*) of *\~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
+            const progressRegex = /\[download\] *(.*) of *\~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
 
             const ytDlpProcess = spawn("yt-dlp", ytDlpArgs)
 
@@ -86,9 +96,7 @@ export default class Downloader {
                 }
             })
 
-            ytDlpProcess.stderr.on("data", (data) =>
-                console.error(data.toString())
-            )
+            ytDlpProcess.stderr.on("data", (data) => console.error(data.toString()))
 
             ytDlpProcess.on("close", (code) => {
                 if (code === 0) {
@@ -108,5 +116,34 @@ export default class Downloader {
         const invalidCharsRegex = /[?*<>|":/\\]+/g
         const sanitizedString = input.replace(invalidCharsRegex, "")
         return sanitizedString.trim()
+    }
+
+    async editMetadata(options: EditMetadataOptions) {
+        const coverPathSplit = options.cover.split("/")
+        const coverFileName = coverPathSplit[coverPathSplit.length - 1]
+
+        let coverBuf = (await loadCache("image", coverFileName)) as Buffer
+
+        if (!coverBuf) {
+            const imageRes = await axios.get(options.cover, { responseType: "arraybuffer" })
+            coverBuf = Buffer.from(imageRes.data)
+            await saveCache(coverBuf, "image", coverFileName)
+        }
+
+        const tags: Tags = {
+            title: options.title,
+            artist: options.artists.join(", "),
+            album: options.album,
+            image: {
+                mime: "image/jpg",
+                type: { id: TagConstants.AttachedPicture.PictureType.FRONT_COVER },
+                description: "Cover Image",
+                imageBuffer: coverBuf,
+            },
+        }
+
+        await NodeId3.write(tags, options.path)
+
+        return tags
     }
 }
