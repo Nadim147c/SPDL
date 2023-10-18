@@ -71,7 +71,7 @@ const TrackAlbumSchema = z.object({
     artists: z.array(AlbumArtistSchema),
 })
 
-const TrackSchema = z.object({
+export const SpotifyPlaylistTrackSchema = z.object({
     album: TrackAlbumSchema,
     artists: z.array(TrackArtistSchema),
     available_markets: z.array(z.string()),
@@ -93,11 +93,13 @@ const TrackSchema = z.object({
     is_local: z.boolean(),
 })
 
+export type SpotifyPlaylistTrack = z.infer<typeof SpotifyPlaylistTrackSchema>
+
 const ItemSchema = z.object({
     added_at: z.string(),
     added_by: OwnerSchema,
     is_local: z.boolean(),
-    track: TrackSchema,
+    track: SpotifyPlaylistTrackSchema,
 })
 
 const TracksSchema = z.object({

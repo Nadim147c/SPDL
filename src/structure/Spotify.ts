@@ -1,9 +1,13 @@
 import axios from "axios"
 import { Buffer } from "node:buffer"
-import { ClientCredentials, ClientCredentialsResponse, ClientCredentialsSchema } from "../models/SpotifyAuthorization"
+import {
+    ClientCredentials,
+    ClientCredentialsResponse,
+    ClientCredentialsSchema,
+} from "../models/SpotifyAuthorization"
+import { SpotifyPlaylistSchema } from "../models/SpotifyPlaylists"
 import { SpotifyTrackSchema } from "../models/SpotifyTrack"
 import { loadCache, saveCache } from "../util/Util"
-import { SpotifyPlaylistSchema } from "../models/SpotifyPlaylists"
 
 export default class Spotify {
     baseApiURI = "https://api.spotify.com/"
@@ -29,13 +33,17 @@ export default class Spotify {
 
         const currentTime = new Date().getTime() / 1000
 
-        if (refetch || !this.ClientCredentials || this.ClientCredentials.expire_time < currentTime) {
+        if (
+            refetch ||
+            !this.ClientCredentials ||
+            this.ClientCredentials.expire_time < currentTime
+        ) {
             console.log("Fetching access token.")
 
             const client_credentials = `${process.env.CLIENT_ID}:${process.env.CLIENT_SECRET}`
 
             const headers = {
-                "Authorization": `Basic ${Buffer.from(client_credentials).toString("base64")}`,
+                Authorization: `Basic ${Buffer.from(client_credentials).toString("base64")}`,
                 "Content-Type": "application/x-www-form-urlencoded",
             }
 
@@ -51,7 +59,8 @@ export default class Spotify {
 
             if (response) {
                 const clientCredentials = response.data
-                clientCredentials.expire_time = new Date().getTime() / 1000 + clientCredentials.expires_in
+                clientCredentials.expire_time =
+                    new Date().getTime() / 1000 + clientCredentials.expires_in
 
                 this.ClientCredentials = ClientCredentialsSchema.parse(clientCredentials)
 
@@ -61,13 +70,21 @@ export default class Spotify {
     }
 
     async getTrack(URI: string) {
-        const cachedTrack = await loadCache("track", URI)
-        if (cachedTrack) return cachedTrack
+        try {
+            const cachedTrack = await loadCache("track", URI)
+            const track = SpotifyTrackSchema.parse(cachedTrack)
+            if (cachedTrack) return track
+        } catch (err) {
+            console.error(err)
+        }
 
-        if (!this.ClientCredentials) throw "Client Credentials not found. Please authorize the client."
+        if (!this.ClientCredentials)
+            throw "Client Credentials not found. Please authorize the client."
 
         const url = new URL(`v1/tracks/${URI}`, this.baseApiURI)
-        const headers = { Authorization: `Bearer ${this.ClientCredentials.access_token}` }
+        const headers = {
+            Authorization: `Bearer ${this.ClientCredentials.access_token}`,
+        }
 
         const response = await axios.get(url.toString(), { headers })
 
@@ -79,13 +96,21 @@ export default class Spotify {
     }
 
     async getPlaylist(URI: string) {
-        const cachedPlaylist = await loadCache("playlist", URI)
-        if (cachedPlaylist) return cachedPlaylist
+        try {
+            const cachedPlaylist = await loadCache("playlist", URI)
+            const playlist = SpotifyPlaylistSchema.parse(cachedPlaylist)
+            if (cachedPlaylist) return playlist
+        } catch (err) {
+            console.log(err)
+        }
 
-        if (!this.ClientCredentials) throw "Client Credentials not found. Please authorize the client."
+        if (!this.ClientCredentials)
+            throw "Client Credentials not found. Please authorize the client."
 
         const url = new URL(`v1/playlists/${URI}`, this.baseApiURI)
-        const headers = { Authorization: `Bearer ${this.ClientCredentials.access_token}` }
+        const headers = {
+            Authorization: `Bearer ${this.ClientCredentials.access_token}`,
+        }
 
         const response = await axios.get(url.toString(), { headers })
 
