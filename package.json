@@ -1,10 +1,12 @@
 {
   "name": "spotify-downloader",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
-    "start": "ts-node src/."
+    "start": "ts-node src/.",
+    "node-start": "node dist/.",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",

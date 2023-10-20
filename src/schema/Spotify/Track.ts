@@ -22,6 +22,7 @@ const ImageSchema = z.object({
     height: z.number(),
     width: z.number(),
 })
+
 const SpotifyTrackArtistSchema = z.object({
     external_urls: ExternalUrlsSchema,
     href: z.string(),
@@ -83,4 +84,4 @@ export const SpotifyTrackSchema = z.object({
     restrictions: z.union([RestrictionsSchema, z.null()]).optional(),
 })
 
-export type SpotifyTrack = z.infer<typeof SpotifyTrackArtistSchema>
+export type SpotifyTrack = z.infer<typeof SpotifyTrackSchema>

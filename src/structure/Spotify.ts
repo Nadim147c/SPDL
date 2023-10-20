@@ -4,9 +4,9 @@ import {
     ClientCredentials,
     ClientCredentialsResponse,
     ClientCredentialsSchema,
-} from "../models/SpotifyAuthorization"
-import { SpotifyPlaylistSchema } from "../models/SpotifyPlaylists"
-import { SpotifyTrackSchema } from "../models/SpotifyTrack"
+} from "../schema/Spotify/Authorization"
+import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist"
+import { SpotifyTrackSchema } from "../schema/Spotify/Track"
 import { loadCache, saveCache } from "../util/Util"
 
 export default class Spotify {

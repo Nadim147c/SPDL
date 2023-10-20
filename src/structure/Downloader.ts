@@ -2,14 +2,9 @@ import axios from "axios"
 import { execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
 import { Promise as NodeId3, TagConstants, Tags } from "node-id3"
-import { SpotifyPlaylistTrack } from "../models/SpotifyPlaylists"
-import { SpotifyTrack } from "../models/SpotifyTrack"
+import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist"
+import { SpotifyTrack } from "../schema/Spotify/Track"
 import { loadCache, saveCache } from "../util/Util"
-
-interface DownloadAudioOptions {
-    track: SpotifyTrack | SpotifyPlaylistTrack
-    playlist?: string
-}
 
 interface EditMetadataOptions {
     path: string
@@ -20,7 +15,20 @@ interface EditMetadataOptions {
 }
 
 export default class Downloader {
-    constructor() {
+    track: SpotifyTrack | SpotifyPlaylistTrack
+    trackName: string
+    outputPath: string
+    playlistName?: string
+
+    constructor(track: SpotifyTrack, playlistName: string) {
+        this.track = track
+        this.trackName = this.sanitizeString(track.name)
+        this.outputPath = `downloads/${track.name}.mp3`
+        if (playlistName) {
+            this.playlistName = playlistName
+            this.outputPath = `downloads/${playlistName}/${this.trackName}.mp3`
+        }
+
         const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
         const ffmpegVersionStr = execSync("ffmpeg -version").toString()
         const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
@@ -33,16 +41,14 @@ export default class Downloader {
         }
     }
 
-    async downloadAudio(options: DownloadAudioOptions) {
-        const track = options.track
-        const trackName = this.sanitizeString(track.name)
+    async downloadAudio() {
+        const track = this.track
+        const trackName = this.trackName
         let outputTemplate = `downloads/${track.name}.%(ext)s`
-        let outputPath = `downloads/${track.name}.mp3`
 
-        if (options.playlist) {
-            const playlist = this.sanitizeString(options.playlist)
+        if (this.playlistName) {
+            const playlist = this.sanitizeString(this.playlistName)
             outputTemplate = `downloads/${playlist}/${trackName}.%(ext)s`
-            outputPath = `downloads/${playlist}/${trackName}.mp3`
         }
 
         const switches = ["--extract-audio", "--no-playlist"]
@@ -100,7 +106,7 @@ export default class Downloader {
 
             ytDlpProcess.on("close", (code) => {
                 if (code === 0) {
-                    resolve(outputPath)
+                    resolve(1)
                 } else {
                     reject(new Error(`Command exited with code ${code}`))
                 }
@@ -118,31 +124,37 @@ export default class Downloader {
         return sanitizedString.trim()
     }
 
-    async editMetadata(options: EditMetadataOptions) {
-        const coverPathSplit = options.cover.split("/")
-        const coverFileName = coverPathSplit[coverPathSplit.length - 1]
-
-        let coverBuf = (await loadCache("image", coverFileName)) as Buffer
-
-        if (!coverBuf) {
-            const imageRes = await axios.get(options.cover, { responseType: "arraybuffer" })
-            coverBuf = Buffer.from(imageRes.data)
-            await saveCache(coverBuf, "image", coverFileName)
+    async editMetadata() {
+        let coverBuf: Buffer
+        const coverUrl = this.track.album.images?.[0].url
+        const tags: Tags = {
+            title: this.track.name,
+            artist: this.track.album.artists.map((artist) => artist.name).join(", "),
+            album: this.track.album.name,
         }
 
-        const tags: Tags = {
-            title: options.title,
-            artist: options.artists.join(", "),
-            album: options.album,
-            image: {
+        if (coverUrl) {
+            const coverPathSplit = coverUrl.split("/")
+            const coverFileName = coverPathSplit[coverPathSplit.length - 1]
+
+            coverBuf = (await loadCache("image", coverFileName)) as Buffer
+
+            if (!coverBuf) {
+                const imageRes = await axios.get(coverUrl, { responseType: "arraybuffer" })
+                coverBuf = Buffer.from(imageRes.data)
+                await saveCache(coverBuf, "image", coverFileName)
+            }
+            const image = {
                 mime: "image/jpg",
                 type: { id: TagConstants.AttachedPicture.PictureType.FRONT_COVER },
                 description: "Cover Image",
                 imageBuffer: coverBuf,
-            },
+            }
+
+            tags.image = image
         }
 
-        await NodeId3.write(tags, options.path)
+        await NodeId3.write(tags, this.outputPath)
 
         return tags
     }
