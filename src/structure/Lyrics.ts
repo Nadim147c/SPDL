@@ -66,8 +66,7 @@ export default class Kugou {
     }
 
     async searchLyricsByKeyword() {
-        const baseUrl = "https://lyrics.kugou.com/search"
-        const url = new URL(baseUrl)
+        const url = new URL("https://lyrics.kugou.com/search")
         url.searchParams.set("ver", "1")
         url.searchParams.set("man", "yes")
         url.searchParams.set("client", "pc")
@@ -179,7 +178,7 @@ export default class Kugou {
             let headCutLine = 0
             const headCutStart = Math.min(MAX_CUT_LENGTH, inputList.length - 1)
             for (let i = headCutStart; i >= 0; i--) {
-                if (BANNED_REGEX.test(inputList[i])) {
+                if (BANNED_REGEX.test(inputList[i] ?? "")) {
                     headCutLine = i + 1
                     break
                 }
@@ -190,7 +189,7 @@ export default class Kugou {
             let tailCutLine = 0
             const tailCutStart = Math.min(trimmedLines.length - 30, inputList.length - 1)
             for (let i = tailCutStart; i >= 0; i--) {
-                if (BANNED_REGEX.test(inputList[inputList.length - i])) {
+                if (BANNED_REGEX.test(inputList[inputList.length - i] ?? "")) {
                     tailCutLine = i + 1
                     break
                 }

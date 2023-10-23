@@ -1,3 +1,4 @@
+import { Command, Option } from "commander"
 import { existsSync, mkdirSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
 
@@ -63,4 +64,25 @@ export async function loadCache<T extends CacheType>(
             return fileType === "lyrics" ? dataStr : JSON.parse(dataStr)
         }
     } catch (err) {}
+}
+
+interface Argument {
+    name: string
+    description?: string
+}
+
+interface CommandBuilderOptions {
+    name: string
+    args?: Argument[]
+    options?: Option[]
+    callback: (...args: any[]) => any
+}
+
+export function buildCommand(program: Command, data: CommandBuilderOptions) {
+    program.command(data.name)
+
+    data.args?.forEach((arg) => program.argument(arg.name, arg.description))
+    data.options?.forEach((option) => program.addOption(option))
+
+    program.action(data.callback)
 }

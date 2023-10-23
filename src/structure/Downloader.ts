@@ -126,7 +126,7 @@ export default class Downloader {
 
     async editMetadata() {
         let coverBuf: Buffer
-        const coverUrl = this.track.album.images?.[0].url
+        const coverUrl = this.track.album.images?.[0]?.url
         const tags: Tags = {
             title: this.track.name,
             artist: this.track.album.artists.map((artist) => artist.name).join(", "),
@@ -136,6 +136,8 @@ export default class Downloader {
         if (coverUrl) {
             const coverPathSplit = coverUrl.split("/")
             const coverFileName = coverPathSplit[coverPathSplit.length - 1]
+
+            if (!coverFileName) throw "Failed to file name from the cover url"
 
             coverBuf = (await loadCache("image", coverFileName)) as Buffer
 
