@@ -1,10 +1,13 @@
 import axios from "axios"
 import { execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
-import { Promise as NodeId3, TagConstants, Tags } from "node-id3"
-import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist"
-import { SpotifyTrack } from "../schema/Spotify/Track"
-import { loadCache, saveCache } from "../util/Util"
+import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
+import { SpotifyTrack } from "../schema/Spotify/Track.js"
+import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
+
+import nodeId3, { Tags } from "node-id3"
+
+const { Promise: NodeId3, TagConstants } = nodeId3
 
 interface EditMetadataOptions {
     path: string
@@ -16,11 +19,13 @@ interface EditMetadataOptions {
 
 export default class Downloader {
     track: SpotifyTrack | SpotifyPlaylistTrack
-    trackName: string
-    outputPath: string
     playlistName?: string
+    private trackName: string
+    private outputPath: string
+    private print: LoggerType
 
-    constructor(track: SpotifyTrack, playlistName: string) {
+    constructor(track: SpotifyTrack, verbose: boolean, playlistName?: string) {
+        this.print = getLogger("Downloader", verbose)
         this.track = track
         this.trackName = this.sanitizeString(track.name)
         this.outputPath = `downloads/${track.name}.mp3`
@@ -34,10 +39,10 @@ export default class Downloader {
         const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
 
         if (ffmpegVersion && ytdlpVersion) {
-            console.log(`YT-DLP Version: ${ytdlpVersion}`)
-            console.log(`FFMPEG Version: ${ffmpegVersion}`)
+            this.print(`YT-DLP Version: ${ytdlpVersion}`)
+            this.print(`FFMPEG Version: ${ffmpegVersion}`)
         } else {
-            console.error("Required external dependency not found")
+            throw "yt-dlp and ffmpeg are missing"
         }
     }
 
@@ -118,7 +123,7 @@ export default class Downloader {
         })
     }
 
-    sanitizeString(input: string): string {
+    private sanitizeString(input: string): string {
         const invalidCharsRegex = /[?*<>|":/\\]+/g
         const sanitizedString = input.replace(invalidCharsRegex, "")
         return sanitizedString.trim()
@@ -126,13 +131,14 @@ export default class Downloader {
 
     async editMetadata() {
         let coverBuf: Buffer
-        const coverUrl = this.track.album.images?.[0]?.url
         const tags: Tags = {
             title: this.track.name,
-            artist: this.track.album.artists.map((artist) => artist.name).join(", "),
+            artist: this.track.artists.map((artist) => artist.name).join(", "),
             album: this.track.album.name,
+            releaseTime: this.track.album.release_date,
         }
 
+        const coverUrl = this.track.album.images?.[0]?.url
         if (coverUrl) {
             const coverPathSplit = coverUrl.split("/")
             const coverFileName = coverPathSplit[coverPathSplit.length - 1]

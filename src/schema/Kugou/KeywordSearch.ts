@@ -1,5 +1,5 @@
 import * as z from "zod"
-import { CandidateSchema } from "./Candidate"
+import { CandidateSchema } from "./Candidate.js"
 
 export const KeywordSearchResultSchema = z.object({
     status: z.number(),
@@ -18,4 +18,5 @@ export const KeywordSearchResultSchema = z.object({
     artists: z.array(z.any()),
     ai_candidates: z.array(z.any()),
 })
+
 export type KeywordSearchResult = z.infer<typeof KeywordSearchResultSchema>

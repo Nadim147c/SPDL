@@ -1,17 +1,7 @@
-import { Command, Option } from "commander"
 import { existsSync, mkdirSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
 
 type CacheType = "image" | "playlist" | "track" | "token" | "lyrics"
-
-export function makeDirs(path: string) {
-    const directories = path.split(/(\\|\/)/g)
-    directories.reduce((a, v) => {
-        const path = a ? `${a}/${v}` : v
-        if (!existsSync(path)) mkdirSync(path)
-        return path
-    })
-}
 
 export async function saveCache(
     inputData: CacheType extends "image" ? Buffer : unknown,
@@ -66,23 +56,11 @@ export async function loadCache<T extends CacheType>(
     } catch (err) {}
 }
 
-interface Argument {
-    name: string
-    description?: string
-}
+export type LoggerType = ReturnType<typeof getLogger>
 
-interface CommandBuilderOptions {
-    name: string
-    args?: Argument[]
-    options?: Option[]
-    callback: (...args: any[]) => any
-}
-
-export function buildCommand(program: Command, data: CommandBuilderOptions) {
-    program.command(data.name)
-
-    data.args?.forEach((arg) => program.argument(arg.name, arg.description))
-    data.options?.forEach((option) => program.addOption(option))
-
-    program.action(data.callback)
+export function getLogger(prefix: string, verbose: boolean) {
+    return function (message: unknown, lowPriority = false) {
+        if (lowPriority && !verbose) return
+        console.log(`[${prefix}]`, message)
+    }
 }

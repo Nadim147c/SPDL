@@ -1,35 +1,63 @@
 #!/usr/bin/env node
 
-import { envVariablesSchema } from "./schema/ProcessEnv"
-import { buildCommand, makeDirs } from "./util/Util"
 import { Command, Option } from "commander"
+import { mkdir, readFile, stat } from "fs/promises"
+import process from "node:process"
+import setupAction from "./actions/setupAction.js"
+import { projectPath } from "./dirname.cjs"
+import trackAction from "./actions/trackAction.js"
 
-makeDirs("cache/playlist")
-makeDirs("cache/track")
-makeDirs("cache/token")
-makeDirs("cache/image")
-makeDirs("cache/lyrics")
-makeDirs("downloads")
+process.chdir(projectPath)
+
+async function makeDirs(path: string) {
+    const directories = path.split(/(\\|\/)/g)
+    let currentPath = ""
+
+    for await (const directory of directories) {
+        currentPath = currentPath ? `${currentPath}/${directory}` : directory
+        try {
+            const stats = await stat(currentPath)
+        } catch (error: any) {
+            if (error.code === "ENOENT") await mkdir(currentPath)
+        }
+    }
+}
+
+await makeDirs(`cache/playlist`)
+await makeDirs(`cache/track`)
+await makeDirs(`cache/image`)
+await makeDirs(`cache/lyrics`)
 
 const program = new Command()
 
-program.version("1.0.0")
-program.description("A simple Commander example")
-program.name("spdl")
+try {
+    const packageJsonStr = await readFile(`package.json`, { encoding: "utf8" })
+    const packageJson = JSON.parse(packageJsonStr)
+    program.name(packageJson.name)
+    program.version(packageJson.version, "-v, version", "Get current version")
+    program.description(packageJson.description)
+} catch (error) {
+    console.log("Failed to get package.json data")
+    console.error(error)
+}
 
-const logLevelOption = [
-    "-l, --log-level <VALUE>",
-    "Verbose log everything",
-    /^(verbose|normal|silent)$/i,
-    "normal",
+const verbosityOption = [
+    "-V, --verbose",
+    "Verbosity of loging when running command",
+    false,
 ] as const
 
 program
-    .command("tokens")
-    .description("Set spotify api client id and secret")
-    .argument("<CLIENT_ID>", "Spotify api client id")
-    .argument("<CLIENT_SECRET>", "Spotify api client secret")
-    .option(...logLevelOption)
-    .action((CLIENT_ID, CLIENT_SECRET, options) => {})
+    .command("setup")
+    .description("Setup client tokens and required dependency.")
+    .option(...verbosityOption)
+    .action(setupAction)
+
+program
+    .command("track")
+    .description("Download a track from spotify track link.")
+    .argument("url", "Url of a spotify track")
+    .option(...verbosityOption)
+    .action(trackAction)
 
 program.parse(process.argv)

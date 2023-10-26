@@ -1,11 +1,11 @@
 import axios from "axios"
-import { HashSearchResultSchema } from "../schema/Kugou/HashSearch"
-import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch"
-import { LyricsDataSchema } from "../schema/Kugou/LyricsData"
-import { SongSearchResultSchema } from "../schema/Kugou/SongSearch"
-import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist"
-import { SpotifyTrack } from "../schema/Spotify/Track"
-import { loadCache, saveCache } from "../util/Util"
+import { HashSearchResultSchema } from "../schema/Kugou/HashSearch.js"
+import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch.js"
+import { LyricsDataSchema } from "../schema/Kugou/LyricsData.js"
+import { SongSearchResultSchema } from "../schema/Kugou/SongSearch.js"
+import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
+import { SpotifyTrack } from "../schema/Spotify/Track.js"
+import { loadCache, saveCache } from "../util/Util.js"
 
 type Track = SpotifyTrack | SpotifyPlaylistTrack
 
@@ -29,7 +29,6 @@ export default class Kugou {
         const candidate = await this.getLyricsCandidate()
 
         if (candidate) {
-            console.log(candidate)
             const { id, accesskey } = candidate
             const lyricsData = await this.downloadLyrics(id, accesskey)
             const rawLyrics = Buffer.from(lyricsData.content, "base64").toString("utf8")

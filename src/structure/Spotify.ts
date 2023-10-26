@@ -1,17 +1,14 @@
 import axios from "axios"
-import { Buffer } from "node:buffer"
 import { z } from "zod"
-import { envVariablesSchema } from "../schema/ProcessEnv"
 import {
     ClientCredentials,
     ClientCredentialsResponse,
     ClientCredentialsSchema,
-} from "../schema/Spotify/Authorization"
-import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist"
-import { SpotifyTrackSchema } from "../schema/Spotify/Track"
-import { loadCache, saveCache } from "../util/Util"
-
-export type LogLevel = "verbose" | "normal" | "silent"
+} from "../schema/Spotify/Authorization.js"
+import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
+import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
+import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
+import { readFile, writeFile } from "fs/promises"
 
 type LoadSpotifyDataCache = {
     type: "track" | "playlist"
@@ -22,55 +19,52 @@ type LoadSpotifyDataCache = {
 export default class Spotify {
     baseApiURI = "https://api.spotify.com/"
     port = 1110
+    print: LoggerType
 
     private clientCredentials: ClientCredentials | undefined
+    private tokens
 
-    constructor(
-        private CLIENT_ID: string,
-        private CLIENT_SECRET: string,
-        public LOG_LEVEL: LogLevel
-    ) {}
-
-    static async createClient(logLevel: LogLevel = "normal") {
-        const cachedTokens = await loadCache("token", "client")
-        if (!cachedTokens) return
-
-        const tokens = envVariablesSchema.safeParse(cachedTokens)
-
-        if (!tokens.success) {
-            console.log("Cached tokens are corrupted.")
-            if (logLevel === "verbose") console.log(tokens.error)
-            return
-        }
-
-        const { CLIENT_ID, CLIENT_SECRET } = tokens.data
-
-        return new this(CLIENT_ID, CLIENT_SECRET, logLevel)
+    private constructor(tokens: string, verbose: boolean) {
+        this.tokens = tokens
+        this.print = getLogger("Spotify", verbose)
     }
 
-    private print(message: unknown, priority: "high" | "normal" | "low" = "normal") {
-        switch (this.LOG_LEVEL) {
-            case "verbose":
-                console.log(message)
-            case "normal":
-                if (priority === "high" || priority === "normal") console.log(message)
-            case "silent":
-                if (priority === "high") console.log(message)
+    static async createClient(verbose: boolean, authorize = false) {
+        const print = getLogger("Spotify", verbose)
+
+        const tokenStr = await readFile(".tokens", { encoding: "utf8" })
+
+        const tokensSchema = z.string().regex(/.{32}:.{32}/)
+        const tokens = tokensSchema.safeParse(tokenStr)
+
+        if (tokens.success) {
+            const validatedToken = tokens.data.split(":")
+            const spotify = new this(tokens.data, verbose)
+
+            const success = await spotify.authorizeClient()
+            if (success) return spotify
+        } else {
+            print("Cached tokens are corrupted.")
+            print("Run `spdl setup` to reset the client tokens")
+            print(tokens.error, true)
         }
     }
 
     private async loadCachedClientCredentials() {
-        const cachedCredentials = await loadCache("token", this.CLIENT_ID)
+        let cachedCredentials
+        try {
+            cachedCredentials = await readFile("client-credentials.json", { encoding: "utf8" })
+        } catch (error) {
+            this.print("Client access token is missing", true)
+        }
+
         if (!cachedCredentials) return
 
         const credentials = ClientCredentialsSchema.safeParse(cachedCredentials)
+        if (credentials.success) return credentials.data
 
-        if (!credentials.success) {
-            this.print("Client credentials aren't cached.")
-            this.print(credentials.error, "low")
-            return
-        }
-        return credentials.data
+        this.print("Client credentials aren't cached", true)
+        this.print(credentials.error, true)
     }
 
     private checkRefetchRequired() {
@@ -82,11 +76,6 @@ export default class Spotify {
         if (expireTime < currentTime) return true
 
         return false
-    }
-
-    private getBasicToken() {
-        const clientIdAndSecret = `${this.CLIENT_ID}:${this.CLIENT_SECRET}`
-        return Buffer.from(clientIdAndSecret).toString("base64")
     }
 
     private getExpireTime(expiresIn: number) {
@@ -107,33 +96,39 @@ export default class Spotify {
         const refetch = !isAuthorizationCompleted || forceRefetch || this.checkRefetchRequired()
         const url = "https://accounts.spotify.com/api/token"
 
-        if (refetch) {
-            this.print("[Spotify] Fetching access token from client ID and SECRET")
+        if (!refetch) return isAuthorizationCompleted
 
-            const headers = {
-                Authorization: `Basic ${this.getBasicToken()}`,
-                "Content-Type": "application/x-www-form-urlencoded",
-            }
-
-            const data = new URLSearchParams()
-            data.append("grant_type", "client_credentials")
-
-            let response
-            try {
-                response = await axios.post<ClientCredentialsResponse>(url, data, { headers })
-                const clientCredentials = response.data
-
-                clientCredentials.expire_time = this.getExpireTime(clientCredentials.expires_in)
-
-                this.clientCredentials = ClientCredentialsSchema.parse(clientCredentials)
-
-                await saveCache(this.clientCredentials, "token", this.CLIENT_ID)
-            } catch (err) {
-                this.print("[Spotify] Failed to authorize the client.")
-                this.print(err, "low")
-                return false
-            }
+        this.print("Fetching access token from client ID and SECRET")
+        const headers = {
+            Authorization: `Basic ${Buffer.from(this.tokens).toString("base64")}`,
+            "Content-Type": "application/x-www-form-urlencoded",
         }
+
+        const data = new URLSearchParams()
+        data.append("grant_type", "client_credentials")
+
+        try {
+            const response = await axios.post<ClientCredentialsResponse>(url, data, { headers })
+            const clientCredentials = response.data
+
+            clientCredentials.expire_time = this.getExpireTime(clientCredentials.expires_in)
+
+            this.clientCredentials = ClientCredentialsSchema.parse(clientCredentials)
+
+            isAuthorizationCompleted = true
+        } catch (error) {
+            this.print("Failed to authorize the client")
+            this.print(error, true)
+        }
+
+        try {
+            await writeFile("client-credentials.json", JSON.stringify(this.clientCredentials))
+        } catch (error) {
+            this.print("Failed to cache client credentials")
+            this.print(error, true)
+        }
+
+        return isAuthorizationCompleted
     }
 
     private async loadSpotifyDataCache(options: LoadSpotifyDataCache) {
@@ -141,12 +136,10 @@ export default class Spotify {
             const cachedData = await loadCache(options.type, options.identifier)
             const data = options.schema.parse(cachedData)
             if (cachedData) return data
-        } catch (err) {
-            this.print(err, "low")
+        } catch (error) {
+            this.print(error, true)
         }
     }
-
-    private isMissingCredentials() {}
 
     async getTrack(URI: string) {
         const cachedTrack = await this.loadSpotifyDataCache({
@@ -157,10 +150,9 @@ export default class Spotify {
 
         if (cachedTrack) return cachedTrack
 
-        if (!this.clientCredentials) {
-            this.print("Client Credentials not found. Please authorize the client.")
-            return
-        }
+        if (!this.clientCredentials)
+            throw "Client Credentials not found. Client authorization is required."
+
         const url = new URL(`v1/tracks/${URI}`, this.baseApiURI)
         const headers = {
             Authorization: `Bearer ${this.clientCredentials.access_token}`,
@@ -182,10 +174,9 @@ export default class Spotify {
             schema: SpotifyPlaylistSchema,
         })
 
-        if (!this.clientCredentials) {
-            this.print("Client Credentials not found. Please authorize the client.")
-            return
-        }
+        if (!this.clientCredentials)
+            throw "Client Credentials not found. Client authorization is required."
+
         const url = new URL(`v1/playlists/${URI}`, this.baseApiURI)
         const headers = {
             Authorization: `Bearer ${this.clientCredentials.access_token}`,
