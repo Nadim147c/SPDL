@@ -1,11 +1,12 @@
 import axios from "axios"
-import { execSync, spawn } from "child_process"
+import { exec, execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
+import nodeId3, { Tags } from "node-id3"
+import { promisify } from "util"
 import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrack } from "../schema/Spotify/Track.js"
+import { youtubeMusicSearchSchema } from "../schema/YTDLP/Search.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
-
-import nodeId3, { Tags } from "node-id3"
 
 const { Promise: NodeId3, TagConstants } = nodeId3
 
@@ -17,17 +18,23 @@ interface EditMetadataOptions {
     cover: string
 }
 
+const promiseExec = promisify(exec)
+
 export default class Downloader {
     track: SpotifyTrack | SpotifyPlaylistTrack
     playlistName?: string
     private trackName: string
+    private trackArtists: string
     private outputPath: string
     private print: LoggerType
 
     constructor(track: SpotifyTrack, verbose: boolean, playlistName?: string) {
-        this.print = getLogger("Downloader", verbose)
+        this.print = getLogger("SPDL-Downloader", verbose)
+
         this.track = track
         this.trackName = this.sanitizeString(track.name)
+        this.trackArtists = track.artists.map((artist) => artist.name).join(", ")
+
         this.outputPath = `downloads/${track.name}.mp3`
         if (playlistName) {
             this.playlistName = playlistName
@@ -46,10 +53,45 @@ export default class Downloader {
         }
     }
 
+    async searchSong(songSearchLimit: number) {
+        const searchQuery = `${this.trackName} - ${this.trackArtists}`
+
+        const url = new URL("search", "https://music.youtube.com")
+        url.searchParams.set("q", searchQuery)
+        url.hash = "Songs"
+
+        const json = "--dump-single-json"
+        const noDownload = "--skip-download"
+        const limit = `--playlist-end ${songSearchLimit}`
+
+        const cmd = `yt-dlp ${url} ${json} ${noDownload} ${limit}`
+
+        let results
+
+        try {
+            this.print(`Searching song: ${url}`)
+            results = await promiseExec(cmd)
+        } catch (error) {
+            this.print("Error searching song")
+            this.print(error, true)
+            return
+        }
+
+        try {
+            const dataObj = JSON.parse(results.stdout)
+            const data = youtubeMusicSearchSchema.parse(dataObj)
+            return data.entries
+        } catch (error) {
+            this.print("Error parseing youtube search json data")
+            this.print(error)
+        }
+    }
+
     async downloadAudio() {
-        const track = this.track
+        this.print(`Downloading track: ${this.track.name}`)
+
         const trackName = this.trackName
-        let outputTemplate = `downloads/${track.name}.%(ext)s`
+        let outputTemplate = `downloads/${trackName}.%(ext)s`
 
         if (this.playlistName) {
             const playlist = this.sanitizeString(this.playlistName)
@@ -61,13 +103,23 @@ export default class Downloader {
         const sponsorBlock = ["--sponsorblock-remove", "all"]
         const output = ["--output", outputTemplate]
 
-        const ytDlpArgs = [
-            `ytsearch:${track.name}`,
-            ...switches,
-            ...format,
-            ...sponsorBlock,
-            ...output,
-        ]
+        const searchEntries = await this.searchSong(3)
+
+        if (!searchEntries?.length) {
+            return this.print("Failed to get search entry from youtube music")
+        }
+
+        const duration = this.track.duration_ms / 1000
+
+        const sortedEntries = searchEntries.sort((a, b) => {
+            const durationDiffA = Math.abs(duration - a.duration)
+            const durationDiffB = Math.abs(duration - b.duration)
+            return durationDiffA - durationDiffB
+        })
+
+        const url = sortedEntries[0].original_url
+
+        const ytDlpArgs = [url, ...switches, ...format, ...sponsorBlock, ...output]
 
         return new Promise((resolve, reject) => {
             const progressRegex = /\[download\] *(.*) of *\~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
@@ -141,7 +193,7 @@ export default class Downloader {
         const coverUrl = this.track.album.images?.[0]?.url
         if (coverUrl) {
             const coverPathSplit = coverUrl.split("/")
-            const coverFileName = coverPathSplit[coverPathSplit.length - 1]
+            const coverFileName = coverPathSplit.at(-1)
 
             if (!coverFileName) throw "Failed to file name from the cover url"
 

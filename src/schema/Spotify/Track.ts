@@ -19,8 +19,8 @@ const ExternalUrlsSchema = z.object({
 
 const ImageSchema = z.object({
     url: z.string(),
-    height: z.number(),
-    width: z.number(),
+    height: z.union([z.number(), z.null()]).optional(),
+    width: z.union([z.number(), z.null()]).optional(),
 })
 
 const SpotifyTrackArtistSchema = z.object({

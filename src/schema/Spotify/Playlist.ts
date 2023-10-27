@@ -29,8 +29,8 @@ const AlbumArtistSchema = z.object({
 })
 
 const ImageSchema = z.object({
-    height: z.union([z.number(), z.null()]).optional(),
     url: z.string(),
+    height: z.union([z.number(), z.null()]).optional(),
     width: z.union([z.number(), z.null()]).optional(),
 })
 

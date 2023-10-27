@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
-import { Command, Option } from "commander"
+import { Command } from "commander"
 import { mkdir, readFile, stat } from "fs/promises"
 import process from "node:process"
+import playlistAction from "./actions/playlistAction.js"
 import setupAction from "./actions/setupAction.js"
-import { projectPath } from "./dirname.cjs"
 import trackAction from "./actions/trackAction.js"
+import { projectPath } from "./dirname.cjs"
 
 process.chdir(projectPath)
 
@@ -59,5 +60,18 @@ program
     .argument("url", "Url of a spotify track")
     .option(...verbosityOption)
     .action(trackAction)
+
+program
+    .command("playlist")
+    .description("Download a playlist from spotify playlist link")
+    .argument("url", "Url of a public spotify playlist")
+    .option(...verbosityOption)
+    .option(
+        "-s, --sleep-time [Seconds]",
+        "Amount of seconds to wait in between each track to avoid getting limited",
+        parseFloat,
+        30
+    )
+    .action(playlistAction)
 
 program.parse(process.argv)

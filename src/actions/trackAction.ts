@@ -1,8 +1,7 @@
 import z from "zod"
-import Spotify from "../structure/Spotify.js"
 import Downloader from "../structure/Downloader.js"
+import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/Util.js"
-import { down } from "inquirer/lib/utils/readline.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -20,14 +19,17 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
     const url = new URL(trackUrl)
     if (url.host !== "open.spotify.com") return print("Url must a spotify track url")
 
-    const [uriType, uri] = url.pathname.split("/").filter(Boolean)
+    const [uriType, uri] = url.pathname.split("/").slice(1)
     if (uriType !== "track") return print("Url must a spotify track url")
 
     if (!uri) return print("Failed to get the uri from the url")
     const track = await spotify.getTrack(uri)
 
     if (!track) return print("Failed find the track from the url")
+
     const downloader = new Downloader(track, options.verbose)
+
+    // TODO: Add lyrics to metadata
 
     await downloader.downloadAudio()
     await downloader.editMetadata()

@@ -1,4 +1,5 @@
 import axios from "axios"
+import { readFile, writeFile } from "fs/promises"
 import { z } from "zod"
 import {
     ClientCredentials,
@@ -8,7 +9,6 @@ import {
 import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
-import { readFile, writeFile } from "fs/promises"
 
 type LoadSpotifyDataCache = {
     type: "track" | "playlist"
@@ -51,20 +51,23 @@ export default class Spotify {
     }
 
     private async loadCachedClientCredentials() {
-        let cachedCredentials
+        let cachedCredentialsStr
         try {
-            cachedCredentials = await readFile("client-credentials.json", { encoding: "utf8" })
+            cachedCredentialsStr = await readFile("client-credentials.json", { encoding: "utf8" })
         } catch (error) {
             this.print("Client access token is missing", true)
         }
 
-        if (!cachedCredentials) return
+        if (!cachedCredentialsStr) return
 
-        const credentials = ClientCredentialsSchema.safeParse(cachedCredentials)
-        if (credentials.success) return credentials.data
-
-        this.print("Client credentials aren't cached", true)
-        this.print(credentials.error, true)
+        try {
+            const cachedCredentials = JSON.parse(cachedCredentialsStr)
+            const credentials = ClientCredentialsSchema.parse(cachedCredentials)
+            return credentials
+        } catch (error) {
+            this.print("Client credentials aren't cached", true)
+            this.print(error, true)
+        }
     }
 
     private checkRefetchRequired() {

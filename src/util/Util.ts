@@ -1,4 +1,3 @@
-import { existsSync, mkdirSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
 
 type CacheType = "image" | "playlist" | "track" | "token" | "lyrics"

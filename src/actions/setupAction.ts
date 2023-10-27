@@ -1,9 +1,9 @@
+import { exec } from "child_process"
 import { writeFile } from "fs/promises"
 import inquirer from "inquirer"
+import { platform } from "os"
 import z from "zod"
 import { getLogger } from "../util/Util.js"
-import { exec } from "child_process"
-import { platform } from "os"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
