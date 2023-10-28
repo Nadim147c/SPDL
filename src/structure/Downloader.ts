@@ -10,14 +10,6 @@ import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
 
 const { Promise: NodeId3, TagConstants } = nodeId3
 
-interface EditMetadataOptions {
-    path: string
-    title: string
-    artists: string[]
-    album: string
-    cover: string
-}
-
 const promiseExec = promisify(exec)
 
 export default class Downloader {
@@ -122,14 +114,14 @@ export default class Downloader {
         const ytDlpArgs = [url, ...switches, ...format, ...sponsorBlock, ...output]
 
         return new Promise((resolve, reject) => {
-            const progressRegex = /\[download\] *(.*) of *\~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
+            const progressRegex = /\[download\] *(.*) of *~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
 
             const ytDlpProcess = spawn("yt-dlp", ytDlpArgs)
 
             let progress = false
 
-            let progressBar = new cliProgress.SingleBar({
-                format: `[Download] {bar} | {percentage}% || Size: {size} || Speed: {speed} || ETA: {eta}`,
+            const progressBar = new cliProgress.SingleBar({
+                format: "[Download] {bar} | {percentage}% || Size: {size} || Speed: {speed} || ETA: {eta}",
                 barCompleteChar: "\u2588",
                 barIncompleteChar: "\u2591",
                 hideCursor: true,

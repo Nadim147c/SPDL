@@ -1,4 +1,4 @@
-import * as z from "zod"
+import z from "zod"
 
 const MapSchema = z.object({
     attr0: z.number(),

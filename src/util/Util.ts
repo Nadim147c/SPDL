@@ -47,7 +47,7 @@ export async function loadCache<T extends CacheType>(
     try {
         if (fileType === "image") {
             const data = await readFile(path)
-            return
+            return data as Buffer
         } else {
             const dataStr = await readFile(path, { encoding: "utf-8" })
             return fileType === "lyrics" ? dataStr : JSON.parse(dataStr)

@@ -1,4 +1,4 @@
-import * as z from "zod"
+import z from "zod"
 
 export const ClientCredentialsSchema = z.object({
     access_token: z.string(),
@@ -8,4 +8,6 @@ export const ClientCredentialsSchema = z.object({
 })
 
 export type ClientCredentials = z.infer<typeof ClientCredentialsSchema>
-export type ClientCredentialsResponse = Omit<ClientCredentials, "expire_time"> & { expire_time?: number }
+export type ClientCredentialsResponse = Omit<ClientCredentials, "expire_time"> & {
+    expire_time?: number
+}

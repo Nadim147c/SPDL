@@ -1,38 +1,25 @@
 #!/usr/bin/env node
 
 import { Command } from "commander"
-import { mkdir, readFile, stat } from "fs/promises"
+import { readFile } from "fs/promises"
 import process from "node:process"
 import playlistAction from "./actions/playlistAction.js"
 import setupAction from "./actions/setupAction.js"
 import trackAction from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
+import { makeDirs } from "./util/makeDirs.js"
 
 process.chdir(projectPath)
 
-async function makeDirs(path: string) {
-    const directories = path.split(/(\\|\/)/g)
-    let currentPath = ""
-
-    for await (const directory of directories) {
-        currentPath = currentPath ? `${currentPath}/${directory}` : directory
-        try {
-            const stats = await stat(currentPath)
-        } catch (error: any) {
-            if (error.code === "ENOENT") await mkdir(currentPath)
-        }
-    }
-}
-
-await makeDirs(`cache/playlist`)
-await makeDirs(`cache/track`)
-await makeDirs(`cache/image`)
-await makeDirs(`cache/lyrics`)
+await makeDirs("cache/playlist")
+await makeDirs("cache/track")
+await makeDirs("cache/image")
+await makeDirs("cache/lyrics")
 
 const program = new Command()
 
 try {
-    const packageJsonStr = await readFile(`package.json`, { encoding: "utf8" })
+    const packageJsonStr = await readFile("package.json", { encoding: "utf8" })
     const packageJson = JSON.parse(packageJsonStr)
     program.name(packageJson.name)
     program.version(packageJson.version, "-v, version", "Get current version")

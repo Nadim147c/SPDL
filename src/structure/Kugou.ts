@@ -74,7 +74,7 @@ export default class Kugou {
         const urlStr = `${url}&keyword=${keyword}`
 
         try {
-            console.log(`[Lyrics] Searching lyrics with keyword`)
+            console.log("[Lyrics] Searching lyrics with keyword")
             console.log(urlStr)
             const response = await axios.get(urlStr)
             const data = KeywordSearchResultSchema.parse(response.data)
@@ -96,7 +96,7 @@ export default class Kugou {
         const urlStr = `${url}&keyword=${keyword}`
 
         try {
-            console.log(`[Lyrics] Searching songs`)
+            console.log("[Lyrics] Searching songs")
             console.log(urlStr)
             const response = await axios.get(urlStr)
             const data = SongSearchResultSchema.parse(response.data)
@@ -115,7 +115,7 @@ export default class Kugou {
         url.searchParams.set("hash", songHash)
 
         try {
-            console.log(`[Lyrics] Searching lyrics by hash`)
+            console.log("[Lyrics] Searching lyrics by hash")
             console.log(url.toString())
             const response = await axios.get(url.toString())
             const data = HashSearchResultSchema.parse(response.data)
@@ -183,7 +183,7 @@ export default class Kugou {
                 }
             }
 
-            let trimmedLines = inputList.slice(headCutLine)
+            const trimmedLines = inputList.slice(headCutLine)
 
             let tailCutLine = 0
             const tailCutStart = Math.min(trimmedLines.length - 30, inputList.length - 1)
@@ -194,7 +194,7 @@ export default class Kugou {
                 }
             }
 
-            return tailCutLine !== 0 ? trimmedLines.slice(0, -tailCutLine) : trimmedLines
+            return tailCutLine > 0 ? trimmedLines.slice(0, -tailCutLine) : trimmedLines
         }
 
         lines = removeSongDetails(lines)

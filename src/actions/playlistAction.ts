@@ -1,4 +1,4 @@
-import z, { number } from "zod"
+import z from "zod"
 import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/Util.js"
@@ -34,7 +34,7 @@ export default async function playlistAction(playlistUrl: string, commandOptions
 
     const tracks = playlist.tracks.items.map((item) => item.track)
 
-    const sleep = (time: number) => new Promise((resolve, reject) => setTimeout(resolve, time))
+    const sleep = (time: number) => new Promise((resolve) => setTimeout(resolve, time))
 
     for await (const track of tracks) {
         const downloader = new Downloader(track, options.verbose, playlist.name)

@@ -10,9 +10,9 @@ import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
 
-type LoadSpotifyDataCache = {
+type LoadSpotifyDataCache<T extends z.Schema> = {
     type: "track" | "playlist"
-    schema: z.Schema
+    schema: T
     identifier: string
 }
 
@@ -29,7 +29,7 @@ export default class Spotify {
         this.print = getLogger("Spotify", verbose)
     }
 
-    static async createClient(verbose: boolean, authorize = false) {
+    static async createClient(verbose: boolean) {
         const print = getLogger("Spotify", verbose)
 
         const tokenStr = await readFile(".tokens", { encoding: "utf8" })
@@ -38,7 +38,6 @@ export default class Spotify {
         const tokens = tokensSchema.safeParse(tokenStr)
 
         if (tokens.success) {
-            const validatedToken = tokens.data.split(":")
             const spotify = new this(tokens.data, verbose)
 
             const success = await spotify.authorizeClient()
@@ -134,11 +133,11 @@ export default class Spotify {
         return isAuthorizationCompleted
     }
 
-    private async loadSpotifyDataCache(options: LoadSpotifyDataCache) {
+    private async loadSpotifyDataCache<T extends z.Schema>(options: LoadSpotifyDataCache<T>) {
         try {
             const cachedData = await loadCache(options.type, options.identifier)
             const data = options.schema.parse(cachedData)
-            if (cachedData) return data
+            if (cachedData) return data as z.infer<T>
         } catch (error) {
             this.print(error, true)
         }
@@ -176,6 +175,8 @@ export default class Spotify {
             identifier: URI,
             schema: SpotifyPlaylistSchema,
         })
+
+        if (cachedPlaylist) return cachedPlaylist
 
         if (!this.clientCredentials)
             throw "Client Credentials not found. Client authorization is required."

@@ -1,4 +1,4 @@
-import * as z from "zod"
+import z from "zod"
 import { CandidateSchema } from "./Candidate.js"
 
 export const KeywordSearchResultSchema = z.object({
