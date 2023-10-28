@@ -5,11 +5,12 @@ import { getLogger } from "../util/Util.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
+    output: z.string(),
 })
 
 export default async function trackAction(trackUrl: string, commandOptions: unknown) {
     const options = optionSchema.parse(commandOptions)
-    const print = getLogger("CLI", options.verbose)
+    const print = getLogger("SPDL", options.verbose)
 
     const spotify = await Spotify.createClient(options.verbose)
     if (!spotify) throw "Failed to create spotify client"
@@ -27,7 +28,11 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
 
     if (!track) return print("Failed find the track from the url")
 
-    const downloader = new Downloader(track, options.verbose)
+    const downloader = new Downloader({
+        track: track,
+        verbose: options.verbose,
+        downloadLocation: options.output,
+    })
 
     // TODO: Add lyrics to metadata
 

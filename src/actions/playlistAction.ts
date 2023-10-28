@@ -6,11 +6,12 @@ import { getLogger } from "../util/Util.js"
 const optionSchema = z.object({
     verbose: z.boolean(),
     sleepTime: z.number(),
+    output: z.string(),
 })
 
 export default async function playlistAction(playlistUrl: string, commandOptions: unknown) {
     const options = optionSchema.parse(commandOptions)
-    const print = getLogger("CLI", options.verbose)
+    const print = getLogger("SPDL", options.verbose)
 
     const spotify = await Spotify.createClient(options.verbose)
     if (!spotify) return print("Failed to create spotify client")
@@ -37,7 +38,12 @@ export default async function playlistAction(playlistUrl: string, commandOptions
     const sleep = (time: number) => new Promise((resolve) => setTimeout(resolve, time))
 
     for await (const track of tracks) {
-        const downloader = new Downloader(track, options.verbose, playlist.name)
+        const downloader = new Downloader({
+            track,
+            verbose: options.verbose,
+            downloadLocation: options.output,
+            playlistName: playlist.name,
+        })
 
         // TODO: Add lyrics to metadata
         await downloader.downloadAudio()

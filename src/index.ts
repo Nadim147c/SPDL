@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Command } from "commander"
+import { Command, Option } from "commander"
 import { readFile } from "fs/promises"
 import process from "node:process"
 import playlistAction from "./actions/playlistAction.js"
@@ -8,6 +8,8 @@ import setupAction from "./actions/setupAction.js"
 import trackAction from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
 import { makeDirs } from "./util/makeDirs.js"
+
+const cmdRunDir = process.cwd()
 
 process.chdir(projectPath)
 
@@ -41,11 +43,17 @@ program
     .option(...verbosityOption)
     .action(setupAction)
 
+const outputLocationOption = new Option(
+    "-o, --output <Path>",
+    "Directory to download the tracks/playlists"
+).default(cmdRunDir, "Current Directory")
+
 program
     .command("track")
     .description("Download a track from spotify track link.")
     .argument("url", "Url of a spotify track")
     .option(...verbosityOption)
+    .addOption(outputLocationOption)
     .action(trackAction)
 
 program
@@ -53,6 +61,7 @@ program
     .description("Download a playlist from spotify playlist link")
     .argument("url", "Url of a public spotify playlist")
     .option(...verbosityOption)
+    .addOption(outputLocationOption)
     .option(
         "-s, --sleep-time [Seconds]",
         "Amount of seconds to wait in between each track to avoid getting limited",

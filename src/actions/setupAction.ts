@@ -4,6 +4,9 @@ import inquirer from "inquirer"
 import { platform } from "os"
 import z from "zod"
 import { getLogger } from "../util/Util.js"
+import { promisify } from "util"
+
+const promiseExec = promisify(exec)
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -11,7 +14,11 @@ const optionSchema = z.object({
 
 export default async function setupAction(commandOptions: unknown) {
     const options = optionSchema.parse(commandOptions)
-    const print = getLogger("CLI", options.verbose)
+    const print = getLogger("SPDL", options.verbose)
+
+    const spotifyApiDashboard = "https://developer.spotify.com/dashboard/create"
+
+    print(`Create a spotify app from: ${spotifyApiDashboard}`)
 
     const questions = [
         {
@@ -33,14 +40,27 @@ export default async function setupAction(commandOptions: unknown) {
     await writeFile(".tokens", data, { encoding: "utf8" })
     print("Client tokens have been set")
 
-    const ytdlpVersion = await exec("yt-dlp --version").toString().trim()
-    const ffmpegVersionStr = await exec("ffmpeg -version").toString()
+    const ytdlpVersion = (await promiseExec("yt-dlp --version")).toString().trim()
+    const ffmpegVersionStr = (await promiseExec("ffmpeg -version")).toString()
     const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
+
+    if (ytdlpVersion && ffmpegVersion) {
+        print("yt-dlp and ffmpeg are already installed")
+        return
+    }
 
     const platformName = platform()
 
     if (platformName === "win32") {
-        const winget = await exec("winget -v")
+        const winget = (await promiseExec("winget -v")).toString()
+
+        if (!winget) {
+            console.log("Install these packages from your preperd package manager")
+            console.log("yt-dlp: https://github.com/yt-dlp/yt-dlp")
+            console.log("ffmpeg: https://github.com/FFmpeg/FFmpeg")
+            return
+        }
+
         const agreement = "--accept-package-agreements"
         console.log("Run these following command to finish setup")
         console.log(`winget install yt-dlp.yt-dlp ${agreement}`)

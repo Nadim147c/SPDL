@@ -1,4 +1,5 @@
 import axios from "axios"
+import c from "chalk"
 import { exec, execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
 import nodeId3, { Tags } from "node-id3"
@@ -7,10 +8,18 @@ import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrack } from "../schema/Spotify/Track.js"
 import { youtubeMusicSearchSchema } from "../schema/YTDLP/Search.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
+import ora from "ora"
 
 const { Promise: NodeId3, TagConstants } = nodeId3
 
 const promiseExec = promisify(exec)
+
+interface ConstructorOptions {
+    track: SpotifyTrack
+    verbose: boolean
+    downloadLocation: string
+    playlistName?: string
+}
 
 export default class Downloader {
     track: SpotifyTrack | SpotifyPlaylistTrack
@@ -19,18 +28,25 @@ export default class Downloader {
     private trackArtists: string
     private outputPath: string
     private print: LoggerType
+    private rootLocation: string
+    private verbose: boolean
 
-    constructor(track: SpotifyTrack, verbose: boolean, playlistName?: string) {
+    constructor(options: ConstructorOptions) {
+        const { track, verbose, downloadLocation } = options
+
         this.print = getLogger("SPDL-Downloader", verbose)
 
         this.track = track
         this.trackName = this.sanitizeString(track.name)
         this.trackArtists = track.artists.map((artist) => artist.name).join(", ")
+        this.rootLocation = downloadLocation
+        this.verbose = verbose
 
-        this.outputPath = `downloads/${track.name}.mp3`
-        if (playlistName) {
-            this.playlistName = playlistName
-            this.outputPath = `downloads/${playlistName}/${this.trackName}.mp3`
+        this.outputPath = `${this.rootLocation}/${track.name}.mp3`
+
+        if (options.playlistName) {
+            this.playlistName = options.playlistName
+            this.outputPath = `${this.rootLocation}/${this.playlistName}/${this.trackName}.mp3`
         }
 
         const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
@@ -41,7 +57,7 @@ export default class Downloader {
             this.print(`YT-DLP Version: ${ytdlpVersion}`)
             this.print(`FFMPEG Version: ${ffmpegVersion}`)
         } else {
-            throw "yt-dlp and ffmpeg are missing"
+            throw "yt-dlp and ffmpeg are missing. Run `spdl setup` Before running any command."
         }
     }
 
@@ -58,13 +74,22 @@ export default class Downloader {
 
         const cmd = `yt-dlp ${url} ${json} ${noDownload} ${limit}`
 
+        this.print(`URL: ${url}`)
+
+        const spinner = ora({
+            prefixText: "Searching song",
+            color: "cyan",
+            spinner: "arc",
+        })
+
         let results
 
         try {
-            this.print(`Searching song: ${url}`)
+            spinner.start()
             results = await promiseExec(cmd)
+            spinner.succeed()
         } catch (error) {
-            this.print("Error searching song")
+            spinner.fail("Error searching song")
             this.print(error, true)
             return
         }
@@ -81,13 +106,14 @@ export default class Downloader {
 
     async downloadAudio() {
         this.print(`Downloading track: ${this.track.name}`)
+        this.print(`Track will be downloaded to: ${this.outputPath}`)
 
         const trackName = this.trackName
-        let outputTemplate = `downloads/${trackName}.%(ext)s`
+        let outputTemplate = `${this.rootLocation}/${trackName}.%(ext)s`
 
         if (this.playlistName) {
             const playlist = this.sanitizeString(this.playlistName)
-            outputTemplate = `downloads/${playlist}/${trackName}.%(ext)s`
+            outputTemplate = `${this.rootLocation}/${playlist}/${trackName}.%(ext)s`
         }
 
         const switches = ["--extract-audio", "--no-playlist"]
@@ -120,10 +146,16 @@ export default class Downloader {
 
             let progress = false
 
+            const cBar = c.bgWhite(c.green("{bar}"))
+            const cParcent = c.cyan("{percentage}")
+            const cSize = c.yellow("{size}")
+            const cSpeed = c.green("{speed}")
+            const cETA = c.magenta("{eta}")
+
             const progressBar = new cliProgress.SingleBar({
-                format: "[Download] {bar} | {percentage}% || Size: {size} || Speed: {speed} || ETA: {eta}",
-                barCompleteChar: "\u2588",
-                barIncompleteChar: "\u2591",
+                format: `[Download] [${cBar}] | ${cParcent}% || Size: ${cSize} || Speed: ${cSpeed} || ETA: ${cETA}`,
+                barCompleteChar: "█",
+                barIncompleteChar: " ",
                 hideCursor: true,
             })
 
@@ -180,6 +212,12 @@ export default class Downloader {
             artist: this.track.artists.map((artist) => artist.name).join(", "),
             album: this.track.album.name,
             releaseTime: this.track.album.release_date,
+        }
+
+        const print = getLogger("Metadata", this.verbose)
+
+        for (const [key, value] of Object.entries(tags)) {
+            if (typeof value === "string") print(`${key}: ${c.cyan(value)}`)
         }
 
         const coverUrl = this.track.album.images?.[0]?.url
