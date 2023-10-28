@@ -1,11 +1,12 @@
 import axios from "axios"
+import { readFile, writeFile } from "fs/promises"
 import { HashSearchResultSchema } from "../schema/Kugou/HashSearch.js"
 import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch.js"
 import { LyricsDataSchema } from "../schema/Kugou/LyricsData.js"
 import { SongSearchResultSchema } from "../schema/Kugou/SongSearch.js"
 import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrack } from "../schema/Spotify/Track.js"
-import { loadCache, saveCache } from "../util/Util.js"
+import { LoggerType, getLogger } from "../util/Util.js"
 
 type Track = SpotifyTrack | SpotifyPlaylistTrack
 
@@ -14,54 +15,83 @@ export default class Kugou {
     track: Track
     title: string
     artists: string
+    print: LoggerType
 
-    constructor(track: Track) {
+    constructor(track: Track, verbose: boolean) {
+        this.print = getLogger("Kugou", verbose)
+
         this.track = track
-        const artists = track.album.artists.map((artist) => artist.name).join(", ")
         this.title = this.normalizeTitle(track.name)
+        const artists = track.album.artists.map((artist) => artist.name).join(", ")
         this.artists = this.normalizeArtist(artists)
     }
 
+    private async loadCachedLyrics() {
+        const lyricsPath = `cache/lyrics/${this.track.id}.json`
+        try {
+            const dataStr = await readFile(lyricsPath, { encoding: "utf8" })
+            return dataStr
+        } catch (error) {
+            this.print("Failed to load cached lyrics", true)
+            this.print(error, true)
+        }
+    }
+
+    private async saveLyricsToCache(lyrics: string) {
+        const lyricsPath = `cache/lyrics/${this.track.id}.json`
+        try {
+            await writeFile(lyricsPath, lyrics, { encoding: "utf8" })
+        } catch (error) {
+            this.print("Failed to save lyrics to the cache", true)
+            this.print(error, true)
+        }
+    }
+
     async getLyrics() {
-        const cachedLyrics = await loadCache("lyrics", this.track.id)
-        if (cachedLyrics) return this.normalizeLyrics(cachedLyrics)
+        const cachedLyrics = await this.loadCachedLyrics()
+
+        if (cachedLyrics) return cachedLyrics
 
         const candidate = await this.getLyricsCandidate()
 
         if (candidate) {
             const { id, accesskey } = candidate
             const lyricsData = await this.downloadLyrics(id, accesskey)
+
+            if (!lyricsData) return
+
             const rawLyrics = Buffer.from(lyricsData.content, "base64").toString("utf8")
-
-            await saveCache(rawLyrics, "lyrics", this.track.id)
-
             const lyrics = this.normalizeLyrics(rawLyrics)
+
+            await this.saveLyricsToCache(lyrics)
+
             return lyrics
         }
-
-        return null
     }
 
     async getLyricsCandidate() {
         const durationSec = this.track.duration_ms / 1000
         const songs = await this.searchSongs()
 
-        if (!songs.data.info) return null
+        if (!songs?.data?.info) return
 
         for await (const song of songs.data.info) {
-            if (
-                durationSec === -1 ||
-                Math.abs(song.duration - durationSec) <= this.DURATION_TOLERANCE_MS
-            ) {
+            if (Math.abs(song.duration - durationSec) <= this.DURATION_TOLERANCE_MS) {
                 const hashSearchData = await this.searchLyricsByHash(song.hash)
-                const candidates = hashSearchData.candidates
+                const candidates = hashSearchData?.candidates
 
                 if (candidates?.length) return candidates[0]
             }
         }
+        this.print("Failed to get lyrics by song search")
 
-        const lyricsByKeyword = await this.searchLyricsByKeyword()
-        return lyricsByKeyword.candidates?.length ? lyricsByKeyword.candidates[0] : null
+        try {
+            const lyricsByKeyword = await this.searchLyricsByKeyword()
+            if (lyricsByKeyword?.candidates?.length) return lyricsByKeyword.candidates[0]
+        } catch (error) {
+            this.print("Failed to load lyrics candidates")
+            this.print(error, true)
+        }
     }
 
     async searchLyricsByKeyword() {
@@ -74,14 +104,14 @@ export default class Kugou {
         const urlStr = `${url}&keyword=${keyword}`
 
         try {
-            console.log("[Lyrics] Searching lyrics with keyword")
-            console.log(urlStr)
+            this.print("Searching lyrics with keyword")
+            this.print(urlStr)
             const response = await axios.get(urlStr)
             const data = KeywordSearchResultSchema.parse(response.data)
             return data
         } catch (error) {
-            console.error(`Error searching lyrics: ${error}`)
-            throw error
+            this.print("Error searching lyrics")
+            this.print(error, true)
         }
     }
 
@@ -96,14 +126,14 @@ export default class Kugou {
         const urlStr = `${url}&keyword=${keyword}`
 
         try {
-            console.log("[Lyrics] Searching songs")
-            console.log(urlStr)
+            this.print("Searching songs")
+            this.print(urlStr)
             const response = await axios.get(urlStr)
             const data = SongSearchResultSchema.parse(response.data)
             return data
         } catch (error) {
-            console.error(`Error searching songs: ${error}`)
-            throw error
+            this.print("Error searching songs")
+            this.print(error, true)
         }
     }
 
@@ -115,14 +145,14 @@ export default class Kugou {
         url.searchParams.set("hash", songHash)
 
         try {
-            console.log("[Lyrics] Searching lyrics by hash")
-            console.log(url.toString())
+            this.print("Searching lyrics by hash")
+            this.print(url.toString())
             const response = await axios.get(url.toString())
             const data = HashSearchResultSchema.parse(response.data)
             return data
         } catch (error) {
-            console.error(`Error searching lyrics by hash: ${error}`)
-            throw error
+            this.print("Error searching lyrics by hash")
+            this.print(error, true)
         }
     }
 
@@ -137,14 +167,14 @@ export default class Kugou {
         url.searchParams.set("accesskey", accessKey)
 
         try {
-            console.log(`[Lyrics] Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
-            console.log(url.toString())
+            this.print(`[Lyrics] Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
+            this.print(url.toString())
             const response = await axios.get(url.toString())
             const data = LyricsDataSchema.parse(response.data)
             return data
         } catch (error) {
-            console.error(`Error downloading lyrics: ${error}`)
-            throw error
+            this.print("Failed to download lyrics")
+            this.print(error, true)
         }
     }
 
@@ -171,33 +201,32 @@ export default class Kugou {
 
         let lines = inputStr.replace(/&apos;/g, "'").split("\n")
 
-        lines = lines.filter((line) => ACCEPTED_REGEX.test(line))
+        lines = lines.filter(ACCEPTED_REGEX.test)
 
-        function removeSongDetails(inputList: string[]) {
-            let headCutLine = 0
-            const headCutStart = Math.min(MAX_CUT_LENGTH, inputList.length - 1)
-            for (let i = headCutStart; i >= 0; i--) {
-                if (BANNED_REGEX.test(inputList[i] ?? "")) {
-                    headCutLine = i + 1
-                    break
-                }
+        let headCutLine = 0
+        const headCutStartIndex = Math.min(MAX_CUT_LENGTH, lines.length - 1)
+        for (let i = headCutStartIndex; i >= 0; i--) {
+            if (BANNED_REGEX.test(lines[i] ?? "")) {
+                headCutLine = i + 1
+                break
             }
-
-            const trimmedLines = inputList.slice(headCutLine)
-
-            let tailCutLine = 0
-            const tailCutStart = Math.min(trimmedLines.length - 30, inputList.length - 1)
-            for (let i = tailCutStart; i >= 0; i--) {
-                if (BANNED_REGEX.test(inputList[inputList.length - i] ?? "")) {
-                    tailCutLine = i + 1
-                    break
-                }
-            }
-
-            return tailCutLine > 0 ? trimmedLines.slice(0, -tailCutLine) : trimmedLines
         }
 
-        lines = removeSongDetails(lines)
+        const headTrimmedLines = lines.slice(headCutLine)
+
+        let tailCutLine = 0
+        const tailCutStartIndex = Math.min(
+            headTrimmedLines.length - MAX_CUT_LENGTH,
+            lines.length - 1
+        )
+        for (let i = tailCutStartIndex; i >= 0; i--) {
+            if (BANNED_REGEX.test(lines.at(-i) ?? "")) {
+                tailCutLine = i + 1
+                break
+            }
+        }
+
+        lines = tailCutLine ? headTrimmedLines.slice(0, -tailCutLine) : headTrimmedLines
 
         return lines.join("\n").trim()
     }

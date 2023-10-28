@@ -1,24 +1,14 @@
 import { readFile, writeFile } from "fs/promises"
 
-type CacheType = "image" | "playlist" | "track" | "token" | "lyrics"
+type CacheType = "image" | "playlist" | "track"
 
 export async function saveCache(
     inputData: CacheType extends "image" ? Buffer : unknown,
     fileType: CacheType,
     identifier: string
 ) {
-    let extention
-    switch (fileType) {
-        case "image":
-            extention = "jpg"
-            break
-        case "lyrics":
-            extention = "txt"
-            break
-        default:
-            extention = "json"
-            break
-    }
+    const extention = fileType === "image" ? "jpg" : "json"
+
     const path = `cache/${fileType}/${identifier}.${extention}`
 
     const data = fileType === "image" ? (inputData as Buffer) : JSON.stringify(inputData)
@@ -29,30 +19,22 @@ export async function saveCache(
 export async function loadCache<T extends CacheType>(
     fileType: T,
     identifier: string
-): Promise<(T extends "lyrics" ? string : T extends "image" ? Buffer : object) | void> {
-    let extention
-    switch (fileType) {
-        case "image":
-            extention = "jpg"
-            break
-        case "lyrics":
-            extention = "txt"
-            break
-        default:
-            extention = "json"
-            break
-    }
+): Promise<(T extends "image" ? Buffer : object) | void> {
+    const extention = fileType === "image" ? "jpg" : "json"
+
     const path = `cache/${fileType}/${identifier}.${extention}`
 
     try {
         if (fileType === "image") {
             const data = await readFile(path)
-            return data as Buffer
+            return data
         } else {
             const dataStr = await readFile(path, { encoding: "utf-8" })
-            return fileType === "lyrics" ? dataStr : JSON.parse(dataStr)
+            return JSON.parse(dataStr)
         }
-    } catch (err) {}
+    } catch (err) {
+        return
+    }
 }
 
 export type LoggerType = ReturnType<typeof getLogger>
