@@ -1,37 +1,19 @@
 import { readFile, writeFile } from "fs/promises"
 
-type CacheType = "image" | "playlist" | "track"
+type CacheType = "playlist" | "track"
 
-export async function saveCache(
-    inputData: CacheType extends "image" ? Buffer : unknown,
-    fileType: CacheType,
-    identifier: string
-) {
-    const extention = fileType === "image" ? "jpg" : "json"
-
-    const path = `cache/${fileType}/${identifier}.${extention}`
-
-    const data = fileType === "image" ? (inputData as Buffer) : JSON.stringify(inputData)
-
+export async function saveCache(inputData: unknown, fileType: CacheType, identifier: string) {
+    const path = `cache/${fileType}/${identifier}.json`
+    const data = JSON.stringify(inputData)
     await writeFile(path, data)
 }
 
-export async function loadCache<T extends CacheType>(
-    fileType: T,
-    identifier: string
-): Promise<(T extends "image" ? Buffer : object) | void> {
-    const extention = fileType === "image" ? "jpg" : "json"
-
-    const path = `cache/${fileType}/${identifier}.${extention}`
+export async function loadCache(fileType: CacheType, identifier: string) {
+    const path = `cache/${fileType}/${identifier}.json`
 
     try {
-        if (fileType === "image") {
-            const data = await readFile(path)
-            return data
-        } else {
-            const dataStr = await readFile(path, { encoding: "utf-8" })
-            return JSON.parse(dataStr)
-        }
+        const dataStr = await readFile(path, { encoding: "utf-8" })
+        return JSON.parse(dataStr)
     } catch (err) {
         return
     }

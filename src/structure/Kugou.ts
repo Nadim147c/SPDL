@@ -1,5 +1,7 @@
 import axios from "axios"
+import c from "chalk"
 import { readFile, writeFile } from "fs/promises"
+import nodeId3, { Tags } from "node-id3"
 import { HashSearchResultSchema } from "../schema/Kugou/HashSearch.js"
 import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch.js"
 import { LyricsDataSchema } from "../schema/Kugou/LyricsData.js"
@@ -8,18 +10,22 @@ import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrack } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger } from "../util/Util.js"
 
+const NodeId3 = nodeId3.Promise
+
 type Track = SpotifyTrack | SpotifyPlaylistTrack
 
 export default class Kugou {
-    DURATION_TOLERANCE_MS = 8
     track: Track
-    title: string
-    artists: string
-    print: LoggerType
+    private DURATION_TOLERANCE = 8
+    private title: string
+    private artists: string
+    private print: LoggerType
+    private filePath: string
 
-    constructor(track: Track, verbose: boolean) {
+    constructor(track: Track, filePath: string, verbose: boolean) {
         this.print = getLogger("Kugou", verbose)
 
+        this.filePath = filePath
         this.track = track
         this.title = this.normalizeTitle(track.name)
         const artists = track.album.artists.map((artist) => artist.name).join(", ")
@@ -69,6 +75,19 @@ export default class Kugou {
         }
     }
 
+    async setLyrics(tags: Tags) {
+        const lyrics = await this.getLyrics()
+        if (!lyrics) return this.print("Failed to find lyrics")
+
+        for (const [key, value] of Object.entries(tags)) {
+            if (typeof value === "string") this.print(`${key}: ${c.cyan(value)}`)
+        }
+
+        tags.unsynchronisedLyrics = { language: "en", text: lyrics }
+
+        await NodeId3.write(tags, this.filePath)
+    }
+
     async getLyricsCandidate() {
         const durationSec = this.track.duration_ms / 1000
         const songs = await this.searchSongs()
@@ -76,13 +95,14 @@ export default class Kugou {
         if (!songs?.data?.info) return
 
         for await (const song of songs.data.info) {
-            if (Math.abs(song.duration - durationSec) <= this.DURATION_TOLERANCE_MS) {
+            if (Math.abs(song.duration - durationSec) <= this.DURATION_TOLERANCE) {
                 const hashSearchData = await this.searchLyricsByHash(song.hash)
                 const candidates = hashSearchData?.candidates
 
                 if (candidates?.length) return candidates[0]
             }
         }
+
         this.print("Failed to get lyrics by song search")
 
         try {
@@ -105,7 +125,7 @@ export default class Kugou {
 
         try {
             this.print("Searching lyrics with keyword")
-            this.print(urlStr)
+            this.print(urlStr, true)
             const response = await axios.get(urlStr)
             const data = KeywordSearchResultSchema.parse(response.data)
             return data
@@ -127,7 +147,7 @@ export default class Kugou {
 
         try {
             this.print("Searching songs")
-            this.print(urlStr)
+            this.print(urlStr, true)
             const response = await axios.get(urlStr)
             const data = SongSearchResultSchema.parse(response.data)
             return data
@@ -146,7 +166,7 @@ export default class Kugou {
 
         try {
             this.print("Searching lyrics by hash")
-            this.print(url.toString())
+            this.print(url.toString(), true)
             const response = await axios.get(url.toString())
             const data = HashSearchResultSchema.parse(response.data)
             return data
@@ -168,7 +188,7 @@ export default class Kugou {
 
         try {
             this.print(`[Lyrics] Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
-            this.print(url.toString())
+            this.print(url.toString(), true)
             const response = await axios.get(url.toString())
             const data = LyricsDataSchema.parse(response.data)
             return data
@@ -201,7 +221,7 @@ export default class Kugou {
 
         let lines = inputStr.replace(/&apos;/g, "'").split("\n")
 
-        lines = lines.filter(ACCEPTED_REGEX.test)
+        lines = lines.filter((line) => ACCEPTED_REGEX.test(line))
 
         let headCutLine = 0
         const headCutStartIndex = Math.min(MAX_CUT_LENGTH, lines.length - 1)

@@ -1,13 +1,14 @@
 import axios from "axios"
 import { readFile, writeFile } from "fs/promises"
-import { z } from "zod"
+import { TagConstants, Tags } from "node-id3"
+import z from "zod"
 import {
     ClientCredentials,
     ClientCredentialsResponse,
     ClientCredentialsSchema,
 } from "../schema/Spotify/Authorization.js"
-import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
-import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
+import { SpotifyPlaylistSchema, SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
+import { SpotifyTrack, SpotifyTrackSchema } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
 
 type LoadSpotifyDataCache<T extends z.Schema> = {
@@ -121,6 +122,7 @@ export default class Spotify {
         } catch (error) {
             this.print("Failed to authorize the client")
             this.print(error, true)
+            return
         }
 
         try {
@@ -131,6 +133,58 @@ export default class Spotify {
         }
 
         return isAuthorizationCompleted
+    }
+
+    async getTags(track: SpotifyTrack | SpotifyPlaylistTrack) {
+        const coverUrl = track.album.images?.[0]?.url
+        const tags: Tags = {
+            title: track.name,
+            artist: track.artists.map((artist) => artist.name).join(", "),
+            album: track.album.name,
+            releaseTime: track.album.release_date,
+        }
+
+        if (!coverUrl) return tags
+
+        const coverPathSplit = coverUrl.split("/")
+        const coverId = coverPathSplit.at(-1)
+
+        if (!coverId) throw "Failed to file name from the cover url"
+
+        const path = `cache/image/${coverId}.jpg`
+
+        let cover
+
+        try {
+            cover = await readFile(path)
+        } catch (error) {
+            this.print(error, true)
+        }
+
+        const getImageTag = (img: Buffer) => ({
+            mime: "image/jpg",
+            type: { id: TagConstants.AttachedPicture.PictureType.FRONT_COVER },
+            description: "Cover Image",
+            imageBuffer: img,
+        })
+
+        if (cover) {
+            tags.image = getImageTag(cover)
+            return tags
+        }
+
+        try {
+            const imageRes = await axios.get(coverUrl, { responseType: "arraybuffer" })
+            cover = Buffer.from(imageRes.data)
+            await writeFile(path, cover)
+        } catch (error) {
+            this.print("Failed to get track cover image")
+            this.print(error, true)
+        }
+
+        if (cover) tags.image = getImageTag(cover)
+
+        return tags
     }
 
     private async loadSpotifyDataCache<T extends z.Schema>(options: LoadSpotifyDataCache<T>) {

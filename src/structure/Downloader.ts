@@ -1,16 +1,12 @@
-import axios from "axios"
 import c from "chalk"
 import { exec, execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
-import nodeId3, { Tags } from "node-id3"
+import ora from "ora"
 import { promisify } from "util"
 import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrack } from "../schema/Spotify/Track.js"
 import { youtubeMusicSearchSchema } from "../schema/YTDLP/Search.js"
-import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
-import ora from "ora"
-
-const { Promise: NodeId3, TagConstants } = nodeId3
+import { LoggerType, getLogger } from "../util/Util.js"
 
 const promiseExec = promisify(exec)
 
@@ -24,9 +20,9 @@ interface ConstructorOptions {
 export default class Downloader {
     track: SpotifyTrack | SpotifyPlaylistTrack
     playlistName?: string
+    outputPath: string
     private trackName: string
     private trackArtists: string
-    private outputPath: string
     private print: LoggerType
     private rootLocation: string
     private verbose: boolean
@@ -203,49 +199,5 @@ export default class Downloader {
         const invalidCharsRegex = /[?*<>|":/\\]+/g
         const sanitizedString = input.replace(invalidCharsRegex, "")
         return sanitizedString.trim()
-    }
-
-    async editMetadata() {
-        let coverBuf: Buffer
-        const tags: Tags = {
-            title: this.track.name,
-            artist: this.track.artists.map((artist) => artist.name).join(", "),
-            album: this.track.album.name,
-            releaseTime: this.track.album.release_date,
-        }
-
-        const print = getLogger("Metadata", this.verbose)
-
-        for (const [key, value] of Object.entries(tags)) {
-            if (typeof value === "string") print(`${key}: ${c.cyan(value)}`)
-        }
-
-        const coverUrl = this.track.album.images?.[0]?.url
-        if (coverUrl) {
-            const coverPathSplit = coverUrl.split("/")
-            const coverFileName = coverPathSplit.at(-1)
-
-            if (!coverFileName) throw "Failed to file name from the cover url"
-
-            coverBuf = (await loadCache("image", coverFileName)) as Buffer
-
-            if (!coverBuf) {
-                const imageRes = await axios.get(coverUrl, { responseType: "arraybuffer" })
-                coverBuf = Buffer.from(imageRes.data)
-                await saveCache(coverBuf, "image", coverFileName)
-            }
-            const image = {
-                mime: "image/jpg",
-                type: { id: TagConstants.AttachedPicture.PictureType.FRONT_COVER },
-                description: "Cover Image",
-                imageBuffer: coverBuf,
-            }
-
-            tags.image = image
-        }
-
-        await NodeId3.write(tags, this.outputPath)
-
-        return tags
     }
 }
