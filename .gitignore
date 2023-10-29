@@ -1,8 +1,11 @@
+# Directories
+.vscode
 node_modules
 dist
 bin
 cache
-downloads
+
+# Files
 .env
 .tokens
 client-credentials.json

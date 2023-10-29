@@ -1,12 +1,15 @@
 {
-    "name": "spdl",
-    "version": "0.0.1",
-    "description": "A yt-dlp wrapper that uses spotify metadata.",
+    "name": "@nadim147/spdl",
+    "version": "0.1.0",
+    "description": "A yt-dlp downloader that uses Spotify track metadata.",
     "type": "module",
     "main": "./bin/index.js",
     "bin": {
         "spdl": "./bin/index.js"
     },
+    "files": [
+        "bin"
+    ],
     "scripts": {
         "start": "ts-node src/.",
         "node-start": "node dist/.",
@@ -15,8 +18,17 @@
         "lint": "eslint .",
         "lint:fix": "eslint --fix"
     },
-    "keywords": [],
-    "author": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Nadim147c/SPDL.git"
+    },
+    "keywords": [
+        "spotify",
+        "yt-dlp",
+        "playlist",
+        "youtube"
+    ],
+    "author": "Nadim147c",
     "license": "LGPL-3.0-only",
     "devDependencies": {
         "@types/cli-progress": "^3.11.4",
@@ -27,7 +39,6 @@
         "eslint": "^8.52.0",
         "eslint-config-prettier": "^9.0.0",
         "ts-node": "^10.9.1",
-        "ts-node-dev": "^2.0.0",
         "typescript": "^5.2.2"
     },
     "dependencies": {
