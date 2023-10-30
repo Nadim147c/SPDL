@@ -14,7 +14,7 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
     const print = getLogger("SPDL", options.verbose)
 
     const spotify = await Spotify.createClient(options.verbose)
-    if (!spotify) throw "Failed to create spotify client"
+    if (!spotify) return print("Failed to create spotify client")
 
     await spotify.authorizeClient()
 
