@@ -33,7 +33,14 @@ export default class Spotify {
     static async createClient(verbose: boolean) {
         const print = getLogger("Spotify", verbose)
 
-        const tokenStr = await readFile(".tokens", { encoding: "utf8" })
+        let tokenStr
+        try {
+            tokenStr = await readFile(".tokens", { encoding: "utf8" })
+        } catch (error) {
+            print("Client tokens are missing or corrupted")
+            print("Run `spdl setup` to setup your client spotify api id and secrets")
+            print(error, true)
+        }
 
         const tokensSchema = z.string().regex(/.{32}:.{32}/)
         const tokens = tokensSchema.safeParse(tokenStr)
