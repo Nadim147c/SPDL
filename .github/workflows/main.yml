@@ -5,9 +5,8 @@ on:
     branches:
       - "**"
 
-
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -17,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 21.x
-          cache: pnpm
+          cache: "pnpm"
           
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint:fix && pnpm run build
