@@ -10,6 +10,9 @@
     "files": [
         "bin"
     ],
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "start": "ts-node src/.",
         "build": "tsc",
