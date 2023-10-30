@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "fs/promises"
 
-type CacheType = "playlist" | "track"
+type CacheType = "playlist" | "track" | "album"
 
 export async function saveCache(inputData: unknown, fileType: CacheType, identifier: string) {
     const path = `cache/${fileType}/${identifier}.json`

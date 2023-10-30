@@ -10,9 +10,10 @@ import {
 import { SpotifyPlaylistSchema, SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrack, SpotifyTrackSchema } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
+import { SpotifyAlbumSchema } from "../schema/Spotify/Album.js"
 
 type LoadSpotifyDataCache<T extends z.Schema> = {
-    type: "track" | "playlist"
+    type: "track" | "playlist" | "album"
     schema: T
     identifier: string
 }
@@ -40,6 +41,7 @@ export default class Spotify {
             print("Client tokens are missing or corrupted")
             print("Run `spdl setup` to setup your client spotify api id and secrets")
             print(error, true)
+            return
         }
 
         const tokensSchema = z.string().regex(/.{32}:.{32}/)
@@ -254,5 +256,31 @@ export default class Spotify {
         await saveCache(playlist, "playlist", URI)
 
         return playlist
+    }
+
+    async getAlbum(URI: string) {
+        const cachedAlbum = await this.loadSpotifyDataCache({
+            type: "album",
+            identifier: URI,
+            schema: SpotifyAlbumSchema,
+        })
+
+        if (cachedAlbum) return cachedAlbum
+
+        if (!this.clientCredentials)
+            throw "Client Credentials not found. Client authorization is required."
+
+        const url = new URL(`v1/albums/${URI}`, this.baseApiURI)
+        const headers = {
+            Authorization: `Bearer ${this.clientCredentials.access_token}`,
+        }
+
+        const response = await axios.get(url.toString(), { headers })
+
+        const album = SpotifyAlbumSchema.parse(response.data)
+
+        await saveCache(album, "album", URI)
+
+        return album
     }
 }
