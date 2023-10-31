@@ -3,7 +3,7 @@ import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/Util.js"
 import Kugou from "../structure/Kugou.js"
-import { createSimpleTracksFromPlaylist } from "../util/simpleTracks.js"
+import { createSimpleTracksFromAlbum } from "../util/simpleTracks.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -11,7 +11,7 @@ const optionSchema = z.object({
     output: z.string(),
 })
 
-export default async function playlistAction(playlistUrl: string, commandOptions: unknown) {
+export default async function albumAction(albumUrl: string, commandOptions: unknown) {
     const options = optionSchema.parse(commandOptions)
     const print = getLogger("SPDL", options.verbose)
 
@@ -20,22 +20,22 @@ export default async function playlistAction(playlistUrl: string, commandOptions
 
     await spotify.authorizeClient()
 
-    const url = new URL(playlistUrl)
-    if (url.host !== "open.spotify.com") return print("Url must a spotify playlist url")
+    const url = new URL(albumUrl)
+    if (url.host !== "open.spotify.com") return print("Url must a spotify album url")
 
     const [uriType, uri] = url.pathname.split("/").slice(1)
-    if (uriType !== "playlist") return print("Url must a spotify playlist url")
+    if (uriType !== "album") return print("Url must a spotify playlist url")
 
     if (!uri) return print("Failed to get the uri from the url")
-    const playlist = await spotify.getPlaylist(uri)
+    const album = await spotify.getAlbum(uri)
 
-    if (!playlist) return print("Failed find the track from the url")
+    if (!album) return print("Failed find the track from the url")
 
-    if (!playlist.tracks?.items?.length) return print("No track found in the playlist")
+    if (!album.tracks?.items?.length) return print("No track found in the album")
 
-    print(`Downloading playlist : ${playlist.name}`)
+    print(`Downloading album : ${album.name}`)
 
-    const tracks = createSimpleTracksFromPlaylist(playlist)
+    const tracks = createSimpleTracksFromAlbum(album)
 
     const sleep = (time: number) => new Promise((resolve) => setTimeout(resolve, time))
 
@@ -44,7 +44,6 @@ export default async function playlistAction(playlistUrl: string, commandOptions
             track,
             verbose: options.verbose,
             downloadLocation: options.output,
-            playlistName: playlist.name,
         })
 
         await downloader.downloadAudio()

@@ -2,15 +2,16 @@ import axios from "axios"
 import { readFile, writeFile } from "fs/promises"
 import { TagConstants, Tags } from "node-id3"
 import z from "zod"
+import { SpotifyAlbumSchema } from "../schema/Spotify/Album.js"
 import {
     ClientCredentials,
     ClientCredentialsResponse,
     ClientCredentialsSchema,
 } from "../schema/Spotify/Authorization.js"
-import { SpotifyPlaylistSchema, SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
-import { SpotifyTrack, SpotifyTrackSchema } from "../schema/Spotify/Track.js"
+import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
+import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
-import { SpotifyAlbumSchema } from "../schema/Spotify/Album.js"
+import { SimpleTrack } from "../util/simpleTracks.js"
 
 type LoadSpotifyDataCache<T extends z.Schema> = {
     type: "track" | "playlist" | "album"
@@ -144,21 +145,10 @@ export default class Spotify {
         return isAuthorizationCompleted
     }
 
-    async getTags(track: SpotifyTrack | SpotifyPlaylistTrack) {
-        const coverUrl = track.album.images?.[0]?.url
-        const tags: Tags = {
-            title: track.name,
-            artist: track.artists.map((artist) => artist.name).join(", "),
-            album: track.album.name,
-            releaseTime: track.album.release_date,
-        }
+    async getTrackCover(url: string) {
+        const coverId = url.split("/").at(-1)
 
-        if (!coverUrl) return tags
-
-        const coverPathSplit = coverUrl.split("/")
-        const coverId = coverPathSplit.at(-1)
-
-        if (!coverId) throw "Failed to file name from the cover url"
+        if (!coverId) return this.print("Failed to file name from the cover url")
 
         const path = `cache/image/${coverId}.jpg`
 
@@ -166,32 +156,43 @@ export default class Spotify {
 
         try {
             cover = await readFile(path)
+            return cover
         } catch (error) {
             this.print(error, true)
         }
 
-        const getImageTag = (img: Buffer) => ({
-            mime: "image/jpg",
-            type: { id: TagConstants.AttachedPicture.PictureType.FRONT_COVER },
-            description: "Cover Image",
-            imageBuffer: img,
-        })
-
-        if (cover) {
-            tags.image = getImageTag(cover)
-            return tags
-        }
-
         try {
-            const imageRes = await axios.get(coverUrl, { responseType: "arraybuffer" })
+            const imageRes = await axios.get(url, { responseType: "arraybuffer" })
             cover = Buffer.from(imageRes.data)
             await writeFile(path, cover)
+            return cover
         } catch (error) {
             this.print("Failed to get track cover image")
             this.print(error, true)
         }
+    }
 
-        if (cover) tags.image = getImageTag(cover)
+    async getTags(track: SimpleTrack) {
+        const tags: Tags = {
+            title: track.name,
+            artist: track.artists.join(", "),
+            album: track.album,
+            releaseTime: track.releaseDate,
+        }
+
+        const coverUrl = track.coverUrl
+        if (!coverUrl) return tags
+
+        const cover = await this.getTrackCover(coverUrl)
+
+        if (!cover) return tags
+
+        tags.image = {
+            mime: "image/jpg",
+            type: { id: TagConstants.AttachedPicture.PictureType.FRONT_COVER },
+            description: "Cover Image",
+            imageBuffer: cover,
+        }
 
         return tags
     }

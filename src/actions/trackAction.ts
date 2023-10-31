@@ -3,6 +3,7 @@ import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/Util.js"
 import Kugou from "../structure/Kugou.js"
+import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -29,8 +30,10 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
 
     if (!track) return print("Failed find the track from the url")
 
+    const simpleTrack = createSimpleTrackFromTrack(track)
+
     const downloader = new Downloader({
-        track: track,
+        track: simpleTrack,
         verbose: options.verbose,
         downloadLocation: options.output,
     })
@@ -38,9 +41,9 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
     await downloader.downloadAudio()
     const filePath = downloader.outputPath
 
-    const kugou = new Kugou(track, filePath, options.verbose)
+    const kugou = new Kugou({ track: simpleTrack, filePath, verbose: options.verbose })
 
-    const tags = await spotify.getTags(track)
+    const tags = await spotify.getTags(simpleTrack)
 
     await kugou.setLyrics(tags)
 }

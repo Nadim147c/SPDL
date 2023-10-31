@@ -6,30 +6,32 @@ import { HashSearchResultSchema } from "../schema/Kugou/HashSearch.js"
 import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch.js"
 import { LyricsDataSchema } from "../schema/Kugou/LyricsData.js"
 import { SongSearchResultSchema } from "../schema/Kugou/SongSearch.js"
-import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
-import { SpotifyTrack } from "../schema/Spotify/Track.js"
 import { LoggerType, getLogger } from "../util/Util.js"
+import { SimpleTrack } from "../util/simpleTracks.js"
 
 const NodeId3 = nodeId3.Promise
 
-type Track = SpotifyTrack | SpotifyPlaylistTrack
+type ConstructorOptions = {
+    track: SimpleTrack
+    filePath: string
+    verbose: boolean
+}
 
 export default class Kugou {
-    track: Track
+    track: SimpleTrack
     private DURATION_TOLERANCE = 8
     private title: string
     private artists: string
     private print: LoggerType
     private filePath: string
 
-    constructor(track: Track, filePath: string, verbose: boolean) {
-        this.print = getLogger("Kugou", verbose)
+    constructor(options: ConstructorOptions) {
+        this.print = getLogger("Kugou", options.verbose)
 
-        this.filePath = filePath
-        this.track = track
-        this.title = this.normalizeTitle(track.name)
-        const artists = track.album.artists.map((artist) => artist.name).join(", ")
-        this.artists = this.normalizeArtist(artists)
+        this.filePath = options.filePath
+        this.track = options.track
+        this.title = this.normalizeTitle(options.track.name)
+        this.artists = this.normalizeArtist(options.track.artists.join(", "))
     }
 
     private async loadCachedLyrics() {

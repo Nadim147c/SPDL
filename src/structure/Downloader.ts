@@ -3,23 +3,21 @@ import { exec, execSync, spawn } from "child_process"
 import cliProgress from "cli-progress"
 import ora from "ora"
 import { promisify } from "util"
-import { SpotifyPlaylistTrack } from "../schema/Spotify/Playlist.js"
-import { SpotifyTrack } from "../schema/Spotify/Track.js"
 import { youtubeMusicSearchSchema } from "../schema/YTDLP/Search.js"
 import { LoggerType, getLogger } from "../util/Util.js"
+import { SimpleTrack } from "../util/simpleTracks.js"
 
 const promiseExec = promisify(exec)
 
 interface ConstructorOptions {
-    track: SpotifyTrack
+    track: SimpleTrack
     verbose: boolean
     downloadLocation: string
     playlistName?: string
 }
 
 export default class Downloader {
-    track: SpotifyTrack | SpotifyPlaylistTrack
-    playlistName?: string
+    track: SimpleTrack
     outputPath: string
     private trackName: string
     private trackArtists: string
@@ -34,15 +32,25 @@ export default class Downloader {
 
         this.track = track
         this.trackName = this.sanitizeString(track.name)
-        this.trackArtists = track.artists.map((artist) => artist.name).join(", ")
+        this.trackArtists = track.artists.join(", ")
         this.rootLocation = downloadLocation
         this.verbose = verbose
 
-        this.outputPath = `${this.rootLocation}/${track.name}.mp3`
+        const senitizePlaylist = this.sanitizeString(this.track.playlist ?? "")
+        const senitizeAlbum = this.sanitizeString(this.track.album)
 
-        if (options.playlistName) {
-            this.playlistName = options.playlistName
-            this.outputPath = `${this.rootLocation}/${this.playlistName}/${this.trackName}.mp3`
+        switch (track.originType) {
+            case "album":
+                this.outputPath = `${this.rootLocation}/${senitizeAlbum}/${this.trackName}.mp3`
+                break
+
+            case "playlist":
+                this.outputPath = `${this.rootLocation}/${senitizePlaylist}/${this.trackName}.mp3`
+                break
+
+            default:
+                this.outputPath = `${this.rootLocation}/${track.name}.mp3`
+                break
         }
 
         const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
@@ -105,11 +113,21 @@ export default class Downloader {
         this.print(`Track will be downloaded to: ${this.outputPath}`)
 
         const trackName = this.trackName
-        let outputTemplate = `${this.rootLocation}/${trackName}.%(ext)s`
+        let outputTemplate: string
 
-        if (this.playlistName) {
-            const playlist = this.sanitizeString(this.playlistName)
-            outputTemplate = `${this.rootLocation}/${playlist}/${trackName}.%(ext)s`
+        const senitizePlaylist = this.sanitizeString(this.track.playlist ?? "")
+        const senitizeAlbum = this.sanitizeString(this.track.album)
+
+        switch (this.track.originType) {
+            case "album":
+                outputTemplate = `${this.rootLocation}/${senitizeAlbum}/${trackName}.%(ext)s`
+                break
+            case "playlist":
+                outputTemplate = `${this.rootLocation}/${senitizePlaylist}/${trackName}.%(ext)s`
+                break
+            default:
+                outputTemplate = `${this.rootLocation}/${trackName}.%(ext)s`
+                break
         }
 
         const switches = ["--extract-audio", "--no-playlist"]

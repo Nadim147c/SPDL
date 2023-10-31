@@ -1,10 +1,10 @@
 import z from "zod"
 
-export const ExternalUrlsSchema = z.object({
-    spotify: z.string(),
+const ExternalUrlsSchema = z.object({
+    spotify: z.union([z.string(), z.null()]).optional(),
 })
 
-export const ArtistSchema = z.object({
+const ArtistSchema = z.object({
     external_urls: ExternalUrlsSchema,
     href: z.string(),
     id: z.string(),
@@ -13,7 +13,7 @@ export const ArtistSchema = z.object({
     uri: z.string(),
 })
 
-export const ItemSchema = z.object({
+export const SpotifyAlbumTrackSchema = z.object({
     artists: z.array(ArtistSchema),
     available_markets: z.array(z.string()),
     disc_number: z.number(),
@@ -30,9 +30,11 @@ export const ItemSchema = z.object({
     uri: z.string(),
 })
 
-export const TracksSchema = z.object({
+export type SpotifyAlbumTrack = z.infer<typeof SpotifyAlbumTrackSchema>
+
+const TracksSchema = z.object({
     href: z.string(),
-    items: z.array(ItemSchema),
+    items: z.array(SpotifyAlbumTrackSchema),
     limit: z.number(),
     next: z.null(),
     offset: z.number(),
@@ -40,17 +42,17 @@ export const TracksSchema = z.object({
     total: z.number(),
 })
 
-export const ImageSchema = z.object({
-    height: z.number(),
+const ImageSchema = z.object({
     url: z.string(),
-    width: z.number(),
+    height: z.union([z.number(), z.null()]).optional(),
+    width: z.union([z.number(), z.null()]).optional(),
 })
 
-export const ExternalIdsSchema = z.object({
+const ExternalIdsSchema = z.object({
     upc: z.union([z.string(), z.null()]).optional(),
 })
 
-export const CopyrightSchema = z.object({
+const CopyrightSchema = z.object({
     text: z.string(),
     type: z.string(),
 })
@@ -62,10 +64,10 @@ export const SpotifyAlbumSchema = z.object({
     copyrights: z.array(CopyrightSchema),
     external_ids: ExternalIdsSchema,
     external_urls: ExternalUrlsSchema,
-    genres: z.array(z.any()),
+    genres: z.array(z.unknown()),
     href: z.string(),
     id: z.string(),
-    images: z.array(ImageSchema),
+    images: z.array(ImageSchema).optional(),
     label: z.string(),
     name: z.string(),
     popularity: z.number(),

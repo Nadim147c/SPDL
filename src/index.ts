@@ -8,12 +8,14 @@ import setupAction from "./actions/setupAction.js"
 import trackAction from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
 import { makeDirs } from "./util/makeDirs.js"
+import albumAction from "./actions/albumAction.js"
 
 const cmdRunDir = process.cwd()
 
 process.chdir(projectPath)
 
 await makeDirs("cache/playlist")
+await makeDirs("cache/album")
 await makeDirs("cache/track")
 await makeDirs("cache/image")
 await makeDirs("cache/lyrics")
@@ -31,17 +33,10 @@ try {
     console.error(error)
 }
 
-const verbosityOption = [
+const verbosityOption = new Option(
     "-V, --verbose",
-    "Verbosity of loging when running command",
-    false,
-] as const
-
-program
-    .command("setup")
-    .description("Setup client tokens and required dependency.")
-    .option(...verbosityOption)
-    .action(setupAction)
+    "Verbosity of loging when running command"
+).default(false)
 
 const outputLocationOption = new Option(
     "-o, --output <Path>",
@@ -49,25 +44,42 @@ const outputLocationOption = new Option(
 ).default(cmdRunDir, "Current Directory")
 
 program
+    .command("setup")
+    .description("Setup client tokens and required dependency.")
+    .addOption(verbosityOption)
+    .action(setupAction)
+
+program
     .command("track")
     .description("Download a track from spotify track link.")
     .argument("url", "Url of a spotify track")
-    .option(...verbosityOption)
+    .addOption(verbosityOption)
     .addOption(outputLocationOption)
     .action(trackAction)
+
+const sleepTimeOption = new Option(
+    "-s, --sleep-time [Seconds]",
+    "Amount of seconds to wait in between each track to avoid getting limited"
+)
+    .argParser(parseFloat)
+    .default(30)
 
 program
     .command("playlist")
     .description("Download a playlist from spotify playlist link")
     .argument("url", "Url of a public spotify playlist")
-    .option(...verbosityOption)
+    .addOption(verbosityOption)
     .addOption(outputLocationOption)
-    .option(
-        "-s, --sleep-time [Seconds]",
-        "Amount of seconds to wait in between each track to avoid getting limited",
-        parseFloat,
-        30
-    )
+    .addOption(sleepTimeOption)
     .action(playlistAction)
+
+program
+    .command("album")
+    .description("Download a album from spotify album link")
+    .argument("url", "Url of a public spotify playlist")
+    .addOption(verbosityOption)
+    .addOption(outputLocationOption)
+    .addOption(sleepTimeOption)
+    .action(albumAction)
 
 program.parse(process.argv)

@@ -157,4 +157,4 @@ export const SpotifyPlaylistSchema = z.object({
     tracks: z.union([TracksSchema, z.null()]).optional(),
 })
 
-export type SpotifyPlaylist = z.infer<typeof SpotifyPlaylistAlbumSchema>
+export type SpotifyPlaylist = z.infer<typeof SpotifyPlaylistSchema>

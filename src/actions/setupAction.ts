@@ -1,7 +1,6 @@
 import { exec } from "child_process"
 import { writeFile } from "fs/promises"
 import inquirer from "inquirer"
-import { platform } from "os"
 import z from "zod"
 import { getLogger } from "../util/Util.js"
 import { promisify } from "util"
@@ -47,27 +46,9 @@ export default async function setupAction(commandOptions: unknown) {
     if (ytdlpVersion && ffmpegVersion) {
         print("yt-dlp and ffmpeg are already installed")
         return
-    }
-
-    const platformName = platform()
-
-    if (platformName === "win32") {
-        const winget = (await promiseExec("winget -v")).toString()
-
-        if (!winget) {
-            console.log("Install these packages from your preperd package manager")
-            console.log("yt-dlp: https://github.com/yt-dlp/yt-dlp")
-            console.log("ffmpeg: https://github.com/FFmpeg/FFmpeg")
-            return
-        }
-
-        const agreement = "--accept-package-agreements"
-        console.log("Run these following command to finish setup")
-        console.log(`winget install yt-dlp.yt-dlp ${agreement}`)
-        console.log(`winget install Gyan.FFmpeg ${agreement}`)
     } else {
-        console.log("Install these packages from your preperd package manager")
-        console.log("yt-dlp: https://github.com/yt-dlp/yt-dlp")
-        console.log("ffmpeg: https://github.com/FFmpeg/FFmpeg")
+        print("Your system doesn't have all prequired tools.")
+        print("Visit: https://github.com/Nadim147c/SPDL#requirements to install these tools.")
+        return
     }
 }
