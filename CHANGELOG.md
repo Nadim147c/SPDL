@@ -1,5 +1,16 @@
 # @nadim147/spdl
 
+## 0.2.0
+
+### Minor Changes
+
+-   59126fe: add getAlbum to Spotify class
+-   db4cc7f: add option to download album
+
+### Patch Changes
+
+-   db4cc7f: Replace throw with return to avoid crash
+
 ## 0.1.3
 
 ### Patch Changes
