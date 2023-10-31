@@ -1,5 +1,12 @@
 # @nadim147/spdl
 
+## 0.1.3
+
+### Patch Changes
+
+-   a1c0f3e: Add error handling when client tokens are missing
+-   a1c0f3e: Remove .vscode directory
+
 ## 0.1.2
 
 ### Patch Changes
