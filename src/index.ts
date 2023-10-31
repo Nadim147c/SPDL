@@ -3,12 +3,13 @@
 import { Command, Option } from "commander"
 import { readFile } from "fs/promises"
 import process from "node:process"
+import * as path from "path"
+import albumAction from "./actions/albumAction.js"
 import playlistAction from "./actions/playlistAction.js"
 import setupAction from "./actions/setupAction.js"
 import trackAction from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
 import { makeDirs } from "./util/makeDirs.js"
-import albumAction from "./actions/albumAction.js"
 
 const cmdRunDir = process.cwd()
 
@@ -38,10 +39,15 @@ const verbosityOption = new Option(
     "Verbosity of loging when running command"
 ).default(false)
 
+const pathParser = (inputPath: string) =>
+    path.isAbsolute(inputPath) ? inputPath : path.join(cmdRunDir, inputPath)
+
 const outputLocationOption = new Option(
     "-o, --output <Path>",
     "Directory to download the tracks/playlists"
-).default(cmdRunDir, "Current Directory")
+)
+    .argParser(pathParser)
+    .default(cmdRunDir, "Current Directory")
 
 program
     .command("setup")
