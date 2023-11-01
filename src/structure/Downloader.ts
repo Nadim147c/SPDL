@@ -153,63 +153,56 @@ export default class Downloader {
 
         const ytDlpArgs = [url, ...switches, ...format, ...sponsorBlock, ...output]
 
+        const progressRegex = /\[download\] *(.*) of *~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
+
+        const ytDlpProcess = spawn("yt-dlp", ytDlpArgs)
+
+        let progress = false
+
+        const cBar = c.bgWhite(c.green("{bar}"))
+        const cParcent = c.cyan("{percentage}")
+        const cSize = c.yellow("{size}")
+        const cSpeed = c.green("{speed}")
+        const cETA = c.magenta("{eta}")
+
+        const terminalLength = process.stdout.columns
+
+        const barSize = Math.max(10, Math.min(40, terminalLength - 55))
+
+        const bar = new cliProgress.SingleBar({
+            format: `[${cBar}] ${cParcent}% || Size: ${cSize} || Speed: ${cSpeed} || ETA: ${cETA}`,
+            barCompleteChar: "█",
+            barIncompleteChar: " ",
+            barsize: barSize,
+            hideCursor: true,
+        })
+
+        const stdoutHandler = (data: Buffer) => {
+            const dataString = data.toString().trim()
+            const match = dataString.match(progressRegex)
+
+            if (!match && progress) return bar.stop()
+
+            if (!match) return console.log(dataString)
+
+            const percentStr = match[1]?.replace("%", "")
+            const percent = parseFloat(percentStr ?? "0")
+            const size = match[2]
+            const speed = match[3]
+            const eta = match[4]
+
+            const barArgs = [percent, { size, speed, eta }] as const
+
+            progress ? bar.update(...barArgs) : bar.start(100, ...barArgs)
+
+            progress = true
+        }
+
         return new Promise((resolve, reject) => {
-            const progressRegex = /\[download\] *(.*) of *~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
-
-            const ytDlpProcess = spawn("yt-dlp", ytDlpArgs)
-
-            let progress = false
-
-            const cBar = c.bgWhite(c.green("{bar}"))
-            const cParcent = c.cyan("{percentage}")
-            const cSize = c.yellow("{size}")
-            const cSpeed = c.green("{speed}")
-            const cETA = c.magenta("{eta}")
-
-            const progressBar = new cliProgress.SingleBar({
-                format: `[Download] [${cBar}] | ${cParcent}% || Size: ${cSize} || Speed: ${cSpeed} || ETA: ${cETA}`,
-                barCompleteChar: "█",
-                barIncompleteChar: " ",
-                hideCursor: true,
-            })
-
-            ytDlpProcess.stdout.on("data", (data) => {
-                const dataString = data.toString().trim()
-                const match = dataString.match(progressRegex)
-
-                if (match) {
-                    const percentStr = match[1].replace("%", "")
-                    const percent = parseFloat(percentStr)
-                    const size = match[2]
-                    const speed = match[3]
-                    const eta = match[4]
-
-                    if (!progress) {
-                        progressBar.start(100, percent, { size, speed, eta })
-                    } else {
-                        progressBar.update(percent, { size, speed, eta })
-                    }
-                    progress = true
-                } else if (progress) {
-                    progressBar.stop()
-                } else {
-                    console.log(dataString)
-                }
-            })
-
+            ytDlpProcess.stdout.on("data", stdoutHandler)
             ytDlpProcess.stderr.on("data", (data) => console.error(data.toString()))
-
-            ytDlpProcess.on("close", (code) => {
-                if (code === 0) {
-                    resolve(1)
-                } else {
-                    reject(new Error(`Command exited with code ${code}`))
-                }
-            })
-
-            ytDlpProcess.on("error", (err) =>
-                reject(new Error(`Error spawning the process: ${err.message}`))
-            )
+            ytDlpProcess.on("close", (code) => (code === 0 ? resolve(1) : reject(code)))
+            ytDlpProcess.on("error", reject)
         })
     }
 
