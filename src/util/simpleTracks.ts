@@ -45,6 +45,7 @@ export function createSimpleTracksFromPlaylist(playlist: SpotifyPlaylist) {
             artists: track.artists.map((artist) => artist.name),
             releaseDate: track.album.release_date,
             duration_ms: track.duration_ms,
+            playlist: playlist.name,
             originType: "playlist",
         }
 
