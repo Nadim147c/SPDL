@@ -13,7 +13,7 @@ interface ConstructorOptions {
     track: SimpleTrack
     verbose: boolean
     downloadLocation: string
-    playlistName?: string
+    libCheck: boolean
 }
 
 export default class Downloader {
@@ -53,15 +53,16 @@ export default class Downloader {
                 break
         }
 
-        const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
-        const ffmpegVersionStr = execSync("ffmpeg -version").toString()
-        const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
+        if (options.libCheck) {
+            const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
+            const ffmpegVersionStr = execSync("ffmpeg -version").toString()
+            const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
 
-        if (ffmpegVersion && ytdlpVersion) {
+            if (!ffmpegVersion && !ytdlpVersion)
+                throw "yt-dlp and ffmpeg are missing. Run `spdl setup` Before running any command."
+
             this.print(`YT-DLP Version: ${ytdlpVersion}`)
             this.print(`FFMPEG Version: ${ffmpegVersion}`)
-        } else {
-            throw "yt-dlp and ffmpeg are missing. Run `spdl setup` Before running any command."
         }
     }
 

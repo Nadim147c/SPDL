@@ -36,6 +36,7 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
         track: simpleTrack,
         verbose: options.verbose,
         downloadLocation: options.output,
+        libCheck: true,
     })
 
     await downloader.downloadAudio()

@@ -3,7 +3,7 @@ import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/Util.js"
 import Kugou from "../structure/Kugou.js"
-import { createSimpleTracksFromPlaylist } from "../util/simpleTracks.js"
+import { SimpleTrack, createSimpleTracksFromPlaylist } from "../util/simpleTracks.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -39,12 +39,14 @@ export default async function playlistAction(playlistUrl: string, commandOptions
 
     const sleep = (time: number) => new Promise((resolve) => setTimeout(resolve, time))
 
-    for await (const track of tracks) {
+    for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i] as SimpleTrack
+
         const downloader = new Downloader({
             track,
             verbose: options.verbose,
             downloadLocation: options.output,
-            playlistName: playlist.name,
+            libCheck: i === 0,
         })
 
         await downloader.downloadAudio()
