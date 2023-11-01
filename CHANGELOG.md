@@ -1,5 +1,13 @@
 # @nadim147/spdl
 
+## 0.2.1
+
+### Patch Changes
+
+-   6bcc011: remove uneccessary version check for yt-dlp and ffmpeg
+-   9ab3a77: fix relative path parsing with '-o' option
+-   188a670: add playlist name in simple track creator
+
 ## 0.2.0
 
 ### Minor Changes
