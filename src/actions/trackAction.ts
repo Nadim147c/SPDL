@@ -1,9 +1,9 @@
 import z from "zod"
 import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
-import { getLogger } from "../util/Util.js"
 import Kugou from "../structure/Kugou.js"
 import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
+import { getLogger } from "../util/logger.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),

@@ -1,29 +1,25 @@
 import { readFile, writeFile } from "fs/promises"
+import { getCachePath } from "./homePaths.js"
 
 type CacheType = "playlist" | "track" | "album"
 
 export async function saveCache(inputData: unknown, fileType: CacheType, identifier: string) {
-    const path = `cache/${fileType}/${identifier}.json`
+    const path = await getCachePath(`cache/${fileType}/${identifier}.json`)
     const data = JSON.stringify(inputData)
-    await writeFile(path, data)
+    try {
+        await writeFile(path, data)
+    } catch (error) {
+        console.log("Failed to save cache")
+        console.log(error)
+    }
 }
 
 export async function loadCache(fileType: CacheType, identifier: string) {
-    const path = `cache/${fileType}/${identifier}.json`
-
+    const path = await getCachePath(`cache/${fileType}/${identifier}.json`)
     try {
         const dataStr = await readFile(path, { encoding: "utf-8" })
         return JSON.parse(dataStr)
     } catch (err) {
         return
-    }
-}
-
-export type LoggerType = ReturnType<typeof getLogger>
-
-export function getLogger(prefix: string, verbose: boolean) {
-    return function (message: unknown, lowPriority = false) {
-        if (lowPriority && !verbose) return
-        console.log(`[${prefix}]`, message)
     }
 }

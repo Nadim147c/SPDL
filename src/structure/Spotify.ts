@@ -10,8 +10,10 @@ import {
 } from "../schema/Spotify/Authorization.js"
 import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
-import { LoggerType, getLogger, loadCache, saveCache } from "../util/Util.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
+import { LoggerType, getLogger } from "../util/logger.js"
+import { getCachePath, getConfigPath } from "../util/homePaths.js"
+import { loadCache, saveCache } from "../util/cache.js"
 
 type LoadSpotifyDataCache<T extends z.Schema> = {
     type: "track" | "playlist" | "album"
@@ -37,7 +39,8 @@ export default class Spotify {
 
         let tokenStr
         try {
-            tokenStr = await readFile(".tokens", { encoding: "utf8" })
+            const tokenFile = await getConfigPath(".tokens")
+            tokenStr = await readFile(tokenFile, { encoding: "utf8" })
         } catch (error) {
             print("Client tokens are missing or corrupted")
             print("Run `spdl setup` to setup your client spotify api id and secrets")
@@ -63,7 +66,8 @@ export default class Spotify {
     private async loadCachedClientCredentials() {
         let cachedCredentialsStr
         try {
-            cachedCredentialsStr = await readFile("client-credentials.json", { encoding: "utf8" })
+            const accessTokenPath = await getCachePath("access-token.json")
+            cachedCredentialsStr = await readFile(accessTokenPath, { encoding: "utf8" })
         } catch (error) {
             this.print("Client access token is missing", true)
         }
@@ -136,7 +140,8 @@ export default class Spotify {
         }
 
         try {
-            await writeFile("client-credentials.json", JSON.stringify(this.clientCredentials))
+            const accessTokenPath = await getCachePath("access-token.json", false)
+            await writeFile(accessTokenPath, JSON.stringify(this.clientCredentials))
         } catch (error) {
             this.print("Failed to cache client credentials")
             this.print(error, true)
@@ -150,7 +155,7 @@ export default class Spotify {
 
         if (!coverId) return this.print("Failed to file name from the cover url")
 
-        const path = `cache/image/${coverId}.jpg`
+        const path = await getCachePath(`cache/image/${coverId}.jpg`)
 
         let cover
 

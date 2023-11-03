@@ -1,7 +1,7 @@
 import z from "zod"
 import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
-import { getLogger } from "../util/Util.js"
+import { getLogger } from "../util/logger.js"
 import Kugou from "../structure/Kugou.js"
 import { SimpleTrack, createSimpleTracksFromPlaylist } from "../util/simpleTracks.js"
 

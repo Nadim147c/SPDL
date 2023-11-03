@@ -9,24 +9,17 @@ import playlistAction from "./actions/playlistAction.js"
 import setupAction from "./actions/setupAction.js"
 import trackAction from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
-import { makeDirs } from "./util/makeDirs.js"
 
 const cmdRunDir = process.cwd()
 
 process.chdir(projectPath)
-
-await makeDirs("cache/playlist")
-await makeDirs("cache/album")
-await makeDirs("cache/track")
-await makeDirs("cache/image")
-await makeDirs("cache/lyrics")
 
 const program = new Command()
 
 try {
     const packageJsonStr = await readFile("package.json", { encoding: "utf8" })
     const packageJson = JSON.parse(packageJsonStr)
-    program.name(packageJson.name)
+    program.name("spdl")
     program.version(packageJson.version, "-v, version", "Get current version")
     program.description(packageJson.description)
 } catch (error) {

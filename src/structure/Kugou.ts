@@ -6,8 +6,9 @@ import { HashSearchResultSchema } from "../schema/Kugou/HashSearch.js"
 import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch.js"
 import { LyricsDataSchema } from "../schema/Kugou/LyricsData.js"
 import { SongSearchResultSchema } from "../schema/Kugou/SongSearch.js"
-import { LoggerType, getLogger } from "../util/Util.js"
+import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
+import { getCachePath } from "../util/homePaths.js"
 
 const NodeId3 = nodeId3.Promise
 
@@ -35,7 +36,7 @@ export default class Kugou {
     }
 
     private async loadCachedLyrics() {
-        const lyricsPath = `cache/lyrics/${this.track.id}.json`
+        const lyricsPath = await getCachePath(`cache/lyrics/${this.track.id}.txt`)
         try {
             const dataStr = await readFile(lyricsPath, { encoding: "utf8" })
             return dataStr
@@ -46,7 +47,7 @@ export default class Kugou {
     }
 
     private async saveLyricsToCache(lyrics: string) {
-        const lyricsPath = `cache/lyrics/${this.track.id}.json`
+        const lyricsPath = await getCachePath(`cache/lyrics/${this.track.id}.txt`)
         try {
             await writeFile(lyricsPath, lyrics, { encoding: "utf8" })
         } catch (error) {
@@ -189,7 +190,7 @@ export default class Kugou {
         url.searchParams.set("accesskey", accessKey)
 
         try {
-            this.print(`[Lyrics] Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
+            this.print(`Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
             this.print(url.toString(), true)
             const response = await axios.get(url.toString())
             const data = LyricsDataSchema.parse(response.data)

@@ -2,8 +2,9 @@ import { exec } from "child_process"
 import { writeFile } from "fs/promises"
 import inquirer from "inquirer"
 import z from "zod"
-import { getLogger } from "../util/Util.js"
+import { getLogger } from "../util/logger.js"
 import { promisify } from "util"
+import { getConfigPath } from "../util/homePaths.js"
 
 const promiseExec = promisify(exec)
 
@@ -36,11 +37,14 @@ export default async function setupAction(commandOptions: unknown) {
     const answers = await inquirer.prompt(questions)
     const data = `${answers.clientId}:${answers.clientSecret}`
 
-    await writeFile(".tokens", data, { encoding: "utf8" })
+    const tokensPath = await getConfigPath(".tokens")
+
+    await writeFile(tokensPath, data, { encoding: "utf8" })
+
     print("Client tokens have been set")
 
-    const ytdlpVersion = (await promiseExec("yt-dlp --version")).toString().trim()
-    const ffmpegVersionStr = (await promiseExec("ffmpeg -version")).toString()
+    const ytdlpVersion = (await promiseExec("yt-dlp --version")).stdout.toString().trim()
+    const ffmpegVersionStr = (await promiseExec("ffmpeg -version")).stdout.toString()
     const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
 
     if (ytdlpVersion && ffmpegVersion) {

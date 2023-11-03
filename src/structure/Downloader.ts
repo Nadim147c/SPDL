@@ -4,7 +4,7 @@ import cliProgress from "cli-progress"
 import ora from "ora"
 import { promisify } from "util"
 import { youtubeMusicSearchSchema } from "../schema/YTDLP/Search.js"
-import { LoggerType, getLogger } from "../util/Util.js"
+import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
 
 const promiseExec = promisify(exec)
