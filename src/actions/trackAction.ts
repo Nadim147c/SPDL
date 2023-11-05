@@ -1,11 +1,12 @@
 import c from "chalk"
+import { stat } from "fs/promises"
 import z from "zod"
 import Downloader from "../structure/Downloader.js"
-import Spotify from "../structure/Spotify.js"
 import Kugou from "../structure/Kugou.js"
-import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
+import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/logger.js"
 import printTags from "../util/printTag.js"
+import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -46,8 +47,23 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
         libCheck: true,
     })
 
-    await downloader.downloadAudio()
     const filePath = downloader.outputPath
+
+    let exists = false
+
+    try {
+        const fileStat = await stat(filePath)
+        exists = fileStat.isFile()
+    } catch (error) {
+        // action isn't required
+    }
+
+    if (exists) {
+        print("Track already exists in that location")
+        return
+    }
+
+    await downloader.downloadAudio()
 
     const kugou = new Kugou({ track: simpleTrack, filePath, verbose: options.verbose })
 

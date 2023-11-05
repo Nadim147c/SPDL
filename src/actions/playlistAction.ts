@@ -1,4 +1,5 @@
 import c from "chalk"
+import { stat } from "fs/promises"
 import z from "zod"
 import Downloader from "../structure/Downloader.js"
 import Kugou from "../structure/Kugou.js"
@@ -57,13 +58,28 @@ export default async function playlistAction(playlistUrl: string, commandOptions
             libCheck: i === 0,
         })
 
-        await downloader.downloadAudio()
         const filePath = downloader.outputPath
+
+        let exists = false
+
+        try {
+            const fileStat = await stat(filePath)
+            exists = fileStat.isFile()
+        } catch (error) {
+            // action isn't required
+        }
+
+        if (exists) {
+            print("Track already exists in that location")
+            continue
+        }
+
+        await downloader.downloadAudio()
 
         const kugou = new Kugou({ track, filePath, verbose: options.verbose })
 
         await kugou.setLyrics(tags)
 
-        await sleep(options.sleepTime * 1000)
+        if (i !== tracks.length - 1) await sleep(options.sleepTime * 1000)
     }
 }
