@@ -1,4 +1,5 @@
 import axios from "axios"
+import EventEmitter from "events"
 import { readFile, writeFile } from "fs/promises"
 import nodeId3, { Tags } from "node-id3"
 import ora from "ora"
@@ -9,6 +10,10 @@ import { SongSearchResultSchema } from "../schema/Kugou/SongSearch.js"
 import { getCachePath } from "../util/homePaths.js"
 import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
+
+// IDK is there any memory leaks or not
+// but it works 😜
+new EventEmitter().setMaxListeners(15)
 
 const NodeId3 = nodeId3.Promise
 
