@@ -1,9 +1,11 @@
+import c from "chalk"
 import z from "zod"
 import Downloader from "../structure/Downloader.js"
 import Spotify from "../structure/Spotify.js"
 import Kugou from "../structure/Kugou.js"
 import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
 import { getLogger } from "../util/logger.js"
+import printTags from "../util/printTag.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -32,6 +34,11 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
 
     const simpleTrack = createSimpleTrackFromTrack(track)
 
+    print(c.blue(`Downloading "${simpleTrack.name}"`))
+
+    const tags = await spotify.getTags(simpleTrack)
+    printTags(tags)
+
     const downloader = new Downloader({
         track: simpleTrack,
         verbose: options.verbose,
@@ -43,8 +50,6 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
     const filePath = downloader.outputPath
 
     const kugou = new Kugou({ track: simpleTrack, filePath, verbose: options.verbose })
-
-    const tags = await spotify.getTags(simpleTrack)
 
     await kugou.setLyrics(tags)
 }

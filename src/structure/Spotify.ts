@@ -10,10 +10,10 @@ import {
 } from "../schema/Spotify/Authorization.js"
 import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
-import { SimpleTrack } from "../util/simpleTracks.js"
-import { LoggerType, getLogger } from "../util/logger.js"
-import { getCachePath, getConfigPath } from "../util/homePaths.js"
 import { loadCache, saveCache } from "../util/cache.js"
+import { getCachePath, getConfigPath } from "../util/homePaths.js"
+import { LoggerType, getLogger } from "../util/logger.js"
+import { SimpleTrack } from "../util/simpleTracks.js"
 
 type LoadSpotifyDataCache<T extends z.Schema> = {
     type: "track" | "playlist" | "album"
@@ -155,7 +155,7 @@ export default class Spotify {
 
         if (!coverId) return this.print("Failed to file name from the cover url")
 
-        const path = await getCachePath(`cache/image/${coverId}.jpg`)
+        const path = await getCachePath(`image/${coverId}.jpg`)
 
         let cover
 

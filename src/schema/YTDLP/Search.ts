@@ -1,13 +1,12 @@
 import z from "zod"
 
-const entrySchema = z.object({
+export const youtubeMusicSongSchema = z.object({
     title: z.string(),
     duration: z.number(),
-    original_url: z.string().url(),
+    webpage_url: z.string().url(),
 })
 
-export const youtubeMusicSearchSchema = z.object({
-    entries: z.array(entrySchema).nonempty(),
-})
+export const youtubeMusicSearchSchema = z.array(youtubeMusicSongSchema).nonempty()
 
-export type YouTubeMusicSearch = z.infer<typeof youtubeMusicSearchSchema>
+export type YouTubeMusicSearch = z.infer<typeof youtubeMusicSongSchema>[]
+export type YouTubeMusicSearchNonEmptey = z.infer<typeof youtubeMusicSearchSchema>

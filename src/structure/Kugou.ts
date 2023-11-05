@@ -1,14 +1,14 @@
 import axios from "axios"
-import c from "chalk"
 import { readFile, writeFile } from "fs/promises"
 import nodeId3, { Tags } from "node-id3"
+import ora from "ora"
 import { HashSearchResultSchema } from "../schema/Kugou/HashSearch.js"
 import { KeywordSearchResultSchema } from "../schema/Kugou/KeywordSearch.js"
 import { LyricsDataSchema } from "../schema/Kugou/LyricsData.js"
 import { SongSearchResultSchema } from "../schema/Kugou/SongSearch.js"
+import { getCachePath } from "../util/homePaths.js"
 import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
-import { getCachePath } from "../util/homePaths.js"
 
 const NodeId3 = nodeId3.Promise
 
@@ -17,17 +17,31 @@ type ConstructorOptions = {
     filePath: string
     verbose: boolean
 }
-
 export default class Kugou {
     track: SimpleTrack
+    private verbose: boolean
     private DURATION_TOLERANCE = 8
     private title: string
     private artists: string
     private print: LoggerType
     private filePath: string
 
+    spinnerTitle = "Downloading lyrics"
+    spinner = ora({ text: this.spinnerTitle, color: "cyan", spinner: "arc" })
+    consoleText = `${this.spinnerTitle}:\n`
+
+    showText(input: unknown) {
+        if (this.verbose) {
+            this.consoleText += `\n${input}`
+            this.spinner.text = this.consoleText
+        } else {
+            this.spinner.text = `${this.spinnerTitle}:\n${input}`
+        }
+    }
+
     constructor(options: ConstructorOptions) {
         this.print = getLogger("Kugou", options.verbose)
+        this.verbose = options.verbose
 
         this.filePath = options.filePath
         this.track = options.track
@@ -36,27 +50,30 @@ export default class Kugou {
     }
 
     private async loadCachedLyrics() {
-        const lyricsPath = await getCachePath(`cache/lyrics/${this.track.id}.txt`)
+        this.showText("Trying to load cached lyrics")
+        const lyricsPath = await getCachePath(`lyrics/${this.track.id}.txt`)
         try {
-            const dataStr = await readFile(lyricsPath, { encoding: "utf8" })
+            const dataStr = await readFile(lyricsPath, "utf8")
             return dataStr
         } catch (error) {
-            this.print("Failed to load cached lyrics", true)
+            this.showText("failed to load cached lyrics")
             this.print(error, true)
         }
     }
 
     private async saveLyricsToCache(lyrics: string) {
-        const lyricsPath = await getCachePath(`cache/lyrics/${this.track.id}.txt`)
+        const lyricsPath = await getCachePath(`lyrics/${this.track.id}.txt`)
         try {
-            await writeFile(lyricsPath, lyrics, { encoding: "utf8" })
+            await writeFile(lyricsPath, lyrics, "utf8")
         } catch (error) {
-            this.print("Failed to save lyrics to the cache", true)
+            this.showText("Failed to save lyrics to the cache")
             this.print(error, true)
         }
     }
 
     async getLyrics() {
+        this.spinner.start()
+
         const cachedLyrics = await this.loadCachedLyrics()
 
         if (cachedLyrics) return cachedLyrics
@@ -80,13 +97,11 @@ export default class Kugou {
 
     async setLyrics(tags: Tags) {
         const lyrics = await this.getLyrics()
-        if (!lyrics) return this.print("Failed to find lyrics")
-
-        for (const [key, value] of Object.entries(tags)) {
-            if (typeof value === "string") this.print(`${key}: ${c.cyan(value)}`)
-        }
+        if (!lyrics) return this.spinner.fail("Failed to find lyrics")
 
         tags.unsynchronisedLyrics = { language: "en", text: lyrics }
+
+        if (this.spinner.isSpinning) this.spinner.stop()
 
         await NodeId3.write(tags, this.filePath)
     }
@@ -106,13 +121,13 @@ export default class Kugou {
             }
         }
 
-        this.print("Failed to get lyrics by song search")
+        this.showText("Failed to get lyrics by song search")
 
         try {
             const lyricsByKeyword = await this.searchLyricsByKeyword()
             if (lyricsByKeyword?.candidates?.length) return lyricsByKeyword.candidates[0]
         } catch (error) {
-            this.print("Failed to load lyrics candidates")
+            this.spinner.fail("Failed to load lyrics candidates")
             this.print(error, true)
         }
     }
@@ -127,8 +142,8 @@ export default class Kugou {
         const urlStr = `${url}&keyword=${keyword}`
 
         try {
-            this.print("Searching lyrics with keyword")
-            this.print(urlStr, true)
+            this.showText("Searching lyrics with keyword")
+            this.showText(urlStr)
             const response = await axios.get(urlStr)
             const data = KeywordSearchResultSchema.parse(response.data)
             return data
@@ -149,13 +164,13 @@ export default class Kugou {
         const urlStr = `${url}&keyword=${keyword}`
 
         try {
-            this.print("Searching songs")
-            this.print(urlStr, true)
+            this.showText("Searching songs")
+            this.showText(urlStr)
             const response = await axios.get(urlStr)
             const data = SongSearchResultSchema.parse(response.data)
             return data
         } catch (error) {
-            this.print("Error searching songs")
+            this.showText("Error searching songs")
             this.print(error, true)
         }
     }
@@ -167,14 +182,16 @@ export default class Kugou {
         url.searchParams.set("client", "pc")
         url.searchParams.set("hash", songHash)
 
+        const urlStr = url.toString()
+
         try {
-            this.print("Searching lyrics by hash")
-            this.print(url.toString(), true)
-            const response = await axios.get(url.toString())
+            this.showText("Searching lyrics by hash")
+            this.showText(urlStr)
+            const response = await axios.get(urlStr)
             const data = HashSearchResultSchema.parse(response.data)
             return data
         } catch (error) {
-            this.print("Error searching lyrics by hash")
+            this.showText("Error searching lyrics by hash")
             this.print(error, true)
         }
     }
@@ -189,14 +206,16 @@ export default class Kugou {
         url.searchParams.set("id", id)
         url.searchParams.set("accesskey", accessKey)
 
+        const urlStr = url.toString()
+
         try {
-            this.print(`Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
-            this.print(url.toString(), true)
-            const response = await axios.get(url.toString())
+            this.showText(`Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
+            this.showText(urlStr)
+            const response = await axios.get(urlStr)
             const data = LyricsDataSchema.parse(response.data)
             return data
         } catch (error) {
-            this.print("Failed to download lyrics")
+            this.showText("Failed to download lyrics")
             this.print(error, true)
         }
     }

@@ -1,13 +1,17 @@
 import c from "chalk"
-import { exec, execSync, spawn } from "child_process"
-import cliProgress from "cli-progress"
+import { execSync, spawn } from "child_process"
+import { watch } from "chokidar"
+import { readFile, unlink } from "fs/promises"
 import ora from "ora"
-import { promisify } from "util"
-import { youtubeMusicSearchSchema } from "../schema/YTDLP/Search.js"
+import {
+    YouTubeMusicSearch,
+    YouTubeMusicSearchNonEmptey,
+    youtubeMusicSearchSchema,
+    youtubeMusicSongSchema,
+} from "../schema/YTDLP/Search.js"
+import { getCachePath } from "../util/homePaths.js"
 import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
-
-const promiseExec = promisify(exec)
 
 interface ConstructorOptions {
     track: SimpleTrack
@@ -28,7 +32,7 @@ export default class Downloader {
     constructor(options: ConstructorOptions) {
         const { track, verbose, downloadLocation } = options
 
-        this.print = getLogger("SPDL-Downloader", verbose)
+        this.print = getLogger("Downloader", verbose)
 
         this.track = track
         this.trackName = this.sanitizeString(track.name)
@@ -49,7 +53,7 @@ export default class Downloader {
                 break
 
             default:
-                this.outputPath = `${this.rootLocation}/${track.name}.mp3`
+                this.outputPath = `${this.rootLocation}/${this.trackName}.mp3`
                 break
         }
 
@@ -61,8 +65,7 @@ export default class Downloader {
             if (!ffmpegVersion && !ytdlpVersion)
                 throw "yt-dlp and ffmpeg are missing. Run `spdl setup` Before running any command."
 
-            this.print(`YT-DLP Version: ${ytdlpVersion}`)
-            this.print(`FFMPEG Version: ${ffmpegVersion}`)
+            this.print(`yt-dlp: ${c.green(ytdlpVersion)} ffmpeg: ${c.green(ffmpegVersion)}`)
         }
     }
 
@@ -73,45 +76,86 @@ export default class Downloader {
         url.searchParams.set("q", searchQuery)
         url.hash = "Songs"
 
-        const json = "--dump-single-json"
+        const cacheDir = await getCachePath("yt-dlp")
+
+        const json = "--write-info-json"
         const noDownload = "--skip-download"
-        const limit = `--playlist-end ${songSearchLimit}`
+        const limit = ["--playlist-end", songSearchLimit.toString()]
+        const colors = ["--color", "always"]
+        const outputTemplate = ["--output", `${cacheDir}\\%(playlist_index)s.%(ext)s`]
 
-        const cmd = `yt-dlp ${url} ${json} ${noDownload} ${limit}`
+        const title = "Searching song"
 
-        this.print(`URL: ${url}`)
+        const spinner = ora({ text: title, color: "cyan", spinner: "arc" })
 
-        const spinner = ora({
-            prefixText: "Searching song",
-            color: "cyan",
-            spinner: "arc",
+        let consoleText = `${title}:\n`
+
+        const showText = (input: unknown) => {
+            if (this.verbose) {
+                consoleText += `\n${input}`
+                spinner.text = consoleText
+            } else {
+                spinner.text = `${title}:\n${input}`
+            }
+        }
+
+        spinner.start()
+
+        const urlStr = url.toString()
+
+        const songSearchArgs: string[] = [
+            urlStr,
+            json,
+            noDownload,
+            ...limit,
+            ...colors,
+            ...outputTemplate,
+        ]
+
+        const results: YouTubeMusicSearch = []
+
+        const jsonWatcher = watch(cacheDir)
+
+        jsonWatcher.on("add", async (path) => {
+            if (!path.endsWith(".json")) return
+
+            const dataStr = await readFile(path, "utf8")
+
+            try {
+                const data = JSON.parse(dataStr)
+                const song = youtubeMusicSongSchema.safeParse(data)
+                song.success ? results.push(song.data) : showText("Failed to load json data")
+                await unlink(path)
+            } catch (error) {
+                this.print(error, true)
+            }
         })
 
-        let results
+        const ytDlpProcess = spawn("yt-dlp", songSearchArgs)
 
-        try {
-            spinner.start()
-            results = await promiseExec(cmd)
-            spinner.succeed()
-        } catch (error) {
-            spinner.fail("Error searching song")
-            this.print(error, true)
-            return
-        }
+        return new Promise<YouTubeMusicSearchNonEmptey>((resolve, reject) => {
+            ytDlpProcess.stdout.on("data", showText)
+            ytDlpProcess.stderr.on("data", showText)
 
-        try {
-            const dataObj = JSON.parse(results.stdout)
-            const data = youtubeMusicSearchSchema.parse(dataObj)
-            return data.entries
-        } catch (error) {
-            this.print("Error parseing youtube search json data")
-            this.print(error)
-        }
+            ytDlpProcess.on("close", (code) => {
+                if (code !== 0) return reject("Failed to search song")
+
+                const data = youtubeMusicSearchSchema.safeParse(results)
+                if (!data.success) return reject("Song search results is 0")
+
+                jsonWatcher.close()
+
+                this.verbose ? spinner.succeed() : spinner.stop()
+
+                resolve(data.data)
+            })
+
+            ytDlpProcess.on("error", reject)
+        })
     }
 
     async downloadAudio() {
-        this.print(`Downloading track: ${this.track.name}`)
-        this.print(`Track will be downloaded to: ${this.outputPath}`)
+        this.print(`Download path: ${this.outputPath}`)
 
         const trackName = this.trackName
         let outputTemplate: string
@@ -131,11 +175,6 @@ export default class Downloader {
                 break
         }
 
-        const switches = ["--extract-audio", "--no-playlist"]
-        const format = ["--format", "ba/best", "--audio-format", "mp3"]
-        const sponsorBlock = ["--sponsorblock-remove", "all"]
-        const output = ["--output", outputTemplate]
-
         const searchEntries = await this.searchSong(3)
 
         if (!searchEntries?.length) {
@@ -150,59 +189,44 @@ export default class Downloader {
             return durationDiffA - durationDiffB
         })
 
-        const url = sortedEntries[0].original_url
+        const url = sortedEntries[0].webpage_url
+        const colors = ["--color", "always"]
+        const switches = ["--extract-audio", "--no-playlist"]
+        const format = ["--format", "ba/best", "--audio-format", "mp3"]
+        const sponsorBlock = ["--sponsorblock-remove", "all"]
+        const output = ["--output", outputTemplate]
 
-        const ytDlpArgs = [url, ...switches, ...format, ...sponsorBlock, ...output]
+        const ytDlpArgs = [url, ...colors, ...switches, ...format, ...sponsorBlock, ...output]
 
-        const progressRegex = /\[download\] *(.*) of *~? *([^ ]*) at *([^ ]*) *ETA *([^ ]*)/
+        const title = "Downloading audio"
+
+        const spinner = ora({ text: title, color: "cyan", spinner: "arc" })
+
+        let consoleText = `${title}:\n`
+
+        const showText = (input: unknown) => {
+            if (this.verbose) {
+                consoleText += `\n${input}`
+                spinner.text = consoleText
+            } else {
+                spinner.text = `${title}:\n${input}`
+            }
+        }
+
+        spinner.start()
 
         const ytDlpProcess = spawn("yt-dlp", ytDlpArgs)
 
-        let progress = false
-
-        const cBar = c.bgWhite(c.green("{bar}"))
-        const cParcent = c.cyan("{percentage}")
-        const cSize = c.yellow("{size}")
-        const cSpeed = c.green("{speed}")
-        const cETA = c.magenta("{eta}")
-
-        const terminalLength = process.stdout.columns
-
-        const barSize = Math.max(10, Math.min(40, terminalLength - 55))
-
-        const bar = new cliProgress.SingleBar({
-            format: `[${cBar}] ${cParcent}% || Size: ${cSize} || Speed: ${cSpeed} || ETA: ${cETA}`,
-            barCompleteChar: "█",
-            barIncompleteChar: " ",
-            barsize: barSize,
-            hideCursor: true,
-        })
-
-        const stdoutHandler = (data: Buffer) => {
-            const dataString = data.toString().trim()
-            const match = dataString.match(progressRegex)
-
-            if (!match && progress) return bar.stop()
-
-            if (!match) return console.log(dataString)
-
-            const percentStr = match[1]?.replace("%", "")
-            const percent = parseFloat(percentStr ?? "0")
-            const size = match[2]
-            const speed = match[3]
-            const eta = match[4]
-
-            const barArgs = [percent, { size, speed, eta }] as const
-
-            progress ? bar.update(...barArgs) : bar.start(100, ...barArgs)
-
-            progress = true
-        }
-
         return new Promise((resolve, reject) => {
-            ytDlpProcess.stdout.on("data", stdoutHandler)
-            ytDlpProcess.stderr.on("data", (data) => console.error(data.toString()))
-            ytDlpProcess.on("close", (code) => (code === 0 ? resolve(1) : reject(code)))
+            ytDlpProcess.stdout.on("data", showText)
+            ytDlpProcess.stderr.on("data", showText)
+            ytDlpProcess.on("close", (code) => {
+                if (code !== 0) return reject("failed to download the audio")
+
+                this.verbose ? spinner.succeed() : spinner.stop()
+
+                resolve(code)
+            })
             ytDlpProcess.on("error", reject)
         })
     }

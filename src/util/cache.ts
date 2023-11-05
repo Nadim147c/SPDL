@@ -4,7 +4,7 @@ import { getCachePath } from "./homePaths.js"
 type CacheType = "playlist" | "track" | "album"
 
 export async function saveCache(inputData: unknown, fileType: CacheType, identifier: string) {
-    const path = await getCachePath(`cache/${fileType}/${identifier}.json`)
+    const path = await getCachePath(`${fileType}/${identifier}.json`)
     const data = JSON.stringify(inputData)
     try {
         await writeFile(path, data)
@@ -15,7 +15,7 @@ export async function saveCache(inputData: unknown, fileType: CacheType, identif
 }
 
 export async function loadCache(fileType: CacheType, identifier: string) {
-    const path = await getCachePath(`cache/${fileType}/${identifier}.json`)
+    const path = await getCachePath(`${fileType}/${identifier}.json`)
     try {
         const dataStr = await readFile(path, { encoding: "utf-8" })
         return JSON.parse(dataStr)
