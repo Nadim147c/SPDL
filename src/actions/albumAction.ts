@@ -6,6 +6,7 @@ import Spotify from "../structure/Spotify.js"
 import { getLogger } from "../util/logger.js"
 import printTags from "../util/printTag.js"
 import { SimpleTrack, createSimpleTracksFromAlbum } from "../util/simpleTracks.js"
+import sleep from "../util/sleep.js"
 
 const optionSchema = z.object({
     verbose: z.boolean(),
@@ -38,8 +39,6 @@ export default async function albumAction(albumUrl: string, commandOptions: unkn
     print(`Downloading album : ${album.name}`)
 
     const tracks = createSimpleTracksFromAlbum(album)
-
-    const sleep = (time: number) => new Promise((resolve) => setTimeout(resolve, time))
 
     for (let i = 0; i < tracks.length; i++) {
         const track = tracks[i] as SimpleTrack
