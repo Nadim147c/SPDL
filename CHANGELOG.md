@@ -1,5 +1,18 @@
 # @nadim147/spdl
 
+## 0.3.0
+
+### Minor Changes
+
+-   ff53c44: add timer to sleep function
+-   4c8615f: check if the track already exists
+
+### Patch Changes
+
+-   c0e0574: save cache and config to home directory
+-   65ca1db: improve printing/logging
+-   3ab8cf6: increase `maxEventListener` to avoid error
+
 ## 0.2.1
 
 ### Patch Changes
