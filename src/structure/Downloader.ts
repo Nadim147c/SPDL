@@ -17,6 +17,7 @@ interface ConstructorOptions {
     track: SimpleTrack
     verbose: boolean
     downloadLocation: string
+    songSearchLimit: number
     libCheck: boolean
 }
 
@@ -28,6 +29,7 @@ export default class Downloader {
     private print: LoggerType
     private rootLocation: string
     private verbose: boolean
+    private songSearchLimit: number
 
     constructor(options: ConstructorOptions) {
         const { track, verbose, downloadLocation } = options
@@ -39,6 +41,7 @@ export default class Downloader {
         this.trackArtists = track.artists.join(", ")
         this.rootLocation = downloadLocation
         this.verbose = verbose
+        this.songSearchLimit = options.songSearchLimit
 
         const senitizePlaylist = this.sanitizeString(this.track.playlist ?? "")
         const senitizeAlbum = this.sanitizeString(this.track.album)
@@ -69,12 +72,18 @@ export default class Downloader {
         }
     }
 
-    async searchSong(songSearchLimit: number) {
+    private createSearchUrl() {
         const searchQuery = `${this.trackName} - ${this.trackArtists}`
 
         const url = new URL("search", "https://music.youtube.com")
         url.searchParams.set("q", searchQuery)
         url.hash = "Songs"
+
+        return url
+    }
+
+    async searchSong(songSearchLimit: number) {
+        const url = this.createSearchUrl()
 
         const cacheDir = await getCachePath("yt-dlp")
 
@@ -175,28 +184,42 @@ export default class Downloader {
                 break
         }
 
-        const searchEntries = await this.searchSong(3)
+        const songFindingOptions: string[] = []
 
-        if (!searchEntries?.length) {
-            return this.print("Failed to get search entry from youtube music")
+        if (this.songSearchLimit > 1) {
+            const searchEntries = await this.searchSong(1)
+
+            if (!searchEntries?.length) {
+                return this.print("Failed to get search entry from youtube music")
+            }
+
+            const duration = this.track.duration_ms / 1000
+
+            const sortedEntries = searchEntries.sort((a, b) => {
+                const durationDiffA = Math.abs(duration - a.duration)
+                const durationDiffB = Math.abs(duration - b.duration)
+                return durationDiffA - durationDiffB
+            })
+            songFindingOptions.push(sortedEntries[0].webpage_url)
+        } else {
+            const url = this.createSearchUrl().toString()
+            songFindingOptions.push(url, "--playlist-end", "1")
         }
 
-        const duration = this.track.duration_ms / 1000
-
-        const sortedEntries = searchEntries.sort((a, b) => {
-            const durationDiffA = Math.abs(duration - a.duration)
-            const durationDiffB = Math.abs(duration - b.duration)
-            return durationDiffA - durationDiffB
-        })
-
-        const url = sortedEntries[0].webpage_url
         const colors = ["--color", "always"]
         const switches = ["--extract-audio", "--no-playlist"]
         const format = ["--format", "ba/best", "--audio-format", "mp3"]
         const sponsorBlock = ["--sponsorblock-remove", "all"]
         const output = ["--output", outputTemplate]
 
-        const ytDlpArgs = [url, ...colors, ...switches, ...format, ...sponsorBlock, ...output]
+        const ytDlpArgs = [
+            ...songFindingOptions,
+            ...colors,
+            ...switches,
+            ...format,
+            ...sponsorBlock,
+            ...output,
+        ]
 
         const title = "Downloading audio"
 

@@ -8,11 +8,10 @@ import { getLogger } from "../util/logger.js"
 import printTags from "../util/printTag.js"
 import { SimpleTrack, createSimpleTracksFromAlbum } from "../util/simpleTracks.js"
 import sleep from "../util/sleep.js"
+import CommandOptions from "../schema/CommandOptions.js"
 
-const optionSchema = z.object({
-    verbose: z.boolean(),
+const optionSchema = CommandOptions.extend({
     sleepTime: z.number(),
-    output: z.string(),
 })
 
 export default async function albumAction(albumUrl: string, commandOptions: unknown) {
@@ -55,6 +54,7 @@ export default async function albumAction(albumUrl: string, commandOptions: unkn
             track,
             verbose: options.verbose,
             downloadLocation: options.output,
+            songSearchLimit: options.searchLimit,
             libCheck: i === 0,
         })
 

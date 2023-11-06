@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Command, Option } from "commander"
+import { InvalidArgumentError as CmdError, Command, Option } from "commander"
 import { readFile } from "fs/promises"
 import process from "node:process"
 import * as path from "path"
@@ -42,6 +42,18 @@ const outputLocationOption = new Option(
     .argParser(pathParser)
     .default(cmdRunDir, "Current Directory")
 
+function customParseInt(value: string) {
+    const parsedValue = parseInt(value, 10)
+    if (isNaN(parsedValue)) throw new CmdError("Argument must a integer")
+    return parsedValue
+}
+const searchLimitOption = new Option(
+    "-l, --search-limit <Amount>",
+    "Number of search to make before downloading a track. More than 3 isn't recommanded."
+)
+    .argParser(customParseInt)
+    .default(1, "first track")
+
 program
     .command("setup")
     .description("Setup client tokens and required dependency.")
@@ -54,13 +66,20 @@ program
     .argument("url", "Url of a spotify track")
     .addOption(verbosityOption)
     .addOption(outputLocationOption)
+    .addOption(searchLimitOption)
     .action(trackAction)
 
+function customParseFloat(value: string) {
+    const parsedValue = parseFloat(value)
+    if (isNaN(parsedValue)) throw new CmdError("Argument must a number")
+    return parsedValue
+}
+
 const sleepTimeOption = new Option(
-    "-s, --sleep-time [Seconds]",
-    "Amount of seconds to wait in between each track to avoid getting limited"
+    "-s, --sleep-time <Seconds>",
+    "Amount of seconds to wait in between each track to avoid getting limited. Changing it isn't recommanded."
 )
-    .argParser(parseFloat)
+    .argParser(customParseFloat)
     .default(30)
 
 program
@@ -69,15 +88,17 @@ program
     .argument("url", "Url of a public spotify playlist")
     .addOption(verbosityOption)
     .addOption(outputLocationOption)
+    .addOption(searchLimitOption)
     .addOption(sleepTimeOption)
     .action(playlistAction)
 
 program
     .command("album")
     .description("Download a album from spotify album link")
-    .argument("url", "Url of a public spotify playlist")
+    .argument("url", "Url of spotify album")
     .addOption(verbosityOption)
     .addOption(outputLocationOption)
+    .addOption(searchLimitOption)
     .addOption(sleepTimeOption)
     .action(albumAction)
 

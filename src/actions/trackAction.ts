@@ -1,6 +1,6 @@
 import c from "chalk"
 import { stat } from "fs/promises"
-import z from "zod"
+import CommandOptions from "../schema/CommandOptions.js"
 import Downloader from "../structure/Downloader.js"
 import Kugou from "../structure/Kugou.js"
 import Spotify from "../structure/Spotify.js"
@@ -8,10 +8,7 @@ import { getLogger } from "../util/logger.js"
 import printTags from "../util/printTag.js"
 import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
 
-const optionSchema = z.object({
-    verbose: z.boolean(),
-    output: z.string(),
-})
+const optionSchema = CommandOptions
 
 export default async function trackAction(trackUrl: string, commandOptions: unknown) {
     const options = optionSchema.parse(commandOptions)
@@ -44,6 +41,7 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
         track: simpleTrack,
         verbose: options.verbose,
         downloadLocation: options.output,
+        songSearchLimit: options.searchLimit,
         libCheck: true,
     })
 
