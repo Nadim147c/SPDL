@@ -142,13 +142,13 @@ export default class Kugou {
         url.searchParams.set("ver", "1")
         url.searchParams.set("man", "yes")
         url.searchParams.set("client", "pc")
+        url.searchParams.set("keyword", `${this.artists} - ${this.title}`)
+        url.search = url.search.replace(/\+/g, "%20")
 
-        const keyword = `${this.artists} - ${this.title}`.replace(" ", "%20")
-        const urlStr = `${url}&keyword=${keyword}`
+        const urlStr = url.toString()
 
         try {
-            this.showText("Searching lyrics with keyword")
-            this.showText(urlStr)
+            this.showText(`Searching lyrics with keyword\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = KeywordSearchResultSchema.parse(response.data)
             return data
@@ -164,13 +164,13 @@ export default class Kugou {
         url.searchParams.set("plat", "0")
         url.searchParams.set("pagesize", "8")
         url.searchParams.set("showtype", "0")
+        url.searchParams.set("keyword", `${this.artists} - ${this.title}`)
+        url.search = url.search.replace(/\+/g, "%20")
 
-        const keyword = `${this.artists} - ${this.title}`.replace(" ", "%20")
-        const urlStr = `${url}&keyword=${keyword}`
+        const urlStr = url.toString()
 
         try {
-            this.showText("Searching songs")
-            this.showText(urlStr)
+            this.showText(`Searching songs\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = SongSearchResultSchema.parse(response.data)
             return data
@@ -190,8 +190,7 @@ export default class Kugou {
         const urlStr = url.toString()
 
         try {
-            this.showText("Searching lyrics by hash")
-            this.showText(urlStr)
+            this.showText(`Searching lyrics by hash\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = HashSearchResultSchema.parse(response.data)
             return data
@@ -214,8 +213,7 @@ export default class Kugou {
         const urlStr = url.toString()
 
         try {
-            this.showText(`Downloading lyrics: ID: ${id} | AccessKey: ${accessKey}`)
-            this.showText(urlStr)
+            this.showText(`Downloading lyrics\nID: ${id} | AccessKey: ${accessKey}\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = LyricsDataSchema.parse(response.data)
             return data
