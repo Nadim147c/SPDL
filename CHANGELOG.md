@@ -1,5 +1,15 @@
 # @nadim147/spdl
 
+## 0.4.0
+
+### Minor Changes
+
+-   5454fdd: add option to set custom search limit
+
+### Patch Changes
+
+-   af5a192: use regex `.replace` statement in Kugou
+
 ## 0.3.0
 
 ### Minor Changes
