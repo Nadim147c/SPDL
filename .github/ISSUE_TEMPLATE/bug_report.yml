@@ -1,0 +1,72 @@
+name: Bug Report
+description: Submitte a bug report
+title: "[Bug]: "
+labels: ["bug"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for taking the time to fill out this bug report!
+
+    - type: checkboxes
+      id: terms
+      attributes:
+          label: Completed Installation Guide
+          description: Make sure you have completed the following steps.
+          options:
+              - label: Node installed
+                required: true
+              - label: Yt-dlp(latest) and ffmpeg installed
+                required: true
+              - label: Setup Spotify API tokens by running `spdl setup`
+                required: false
+
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened?
+          description: What unexpect did happen?
+          placeholder: Tell us what you see!
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected-behavior
+      attributes:
+          label: Expected behavior?
+          description: Also tell us, what did you expect to happen?
+          placeholder: Tell us what you see!
+      validations:
+          required: false
+
+    - type: input
+      id: node
+      attributes:
+          label: Node Version
+          description: What version of node are you running?
+          placeholder: Your node version!
+      validations:
+          required: true
+
+    - type: dropdown
+      id: os
+      attributes:
+          label: What operating system are you using?
+          multiple: true
+          options:
+              - Windows
+              - GUN/Linux
+              - MacOS
+              - Other
+          default: 0
+      validations:
+          required: false
+
+    - type: textarea
+      id: logs
+      attributes:
+          label: Verbose log output
+          description: |
+              Please run the command with `-V` or `--verbose` option. Then copy and paste any relevant log output.
+              This will be automatically formatted into code, so no need for backticks.
+          render: shell
