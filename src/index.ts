@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import c from "chalk"
+import { execSync } from "child_process"
 import { InvalidArgumentError as CmdError, Command, Option } from "commander"
 import { readFile } from "fs/promises"
 import process from "node:process"
@@ -19,9 +21,22 @@ const program = new Command()
 try {
     const packageJsonStr = await readFile("package.json", { encoding: "utf8" })
     const packageJson = JSON.parse(packageJsonStr)
+
     program.name("spdl")
     program.version(packageJson.version, "-v, version", "Get current version")
     program.description(packageJson.description)
+
+    program.action(() => {
+        const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
+        const ffmpegVersionStr = execSync("ffmpeg -version").toString()
+        const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
+
+        console.log(`SPDL: ${c.green(packageJson.version)}`)
+        console.log(`YT-DLP: ${c.green(ytdlpVersion)}`)
+        console.log(`FFMPEG: ${c.green(ffmpegVersion)}`)
+        console.log("\n", packageJson.description)
+        console.log("\nRun `spdl --help` to get the help menu.")
+    })
 } catch (error) {
     console.log("Failed to get package.json data")
     console.error(error)

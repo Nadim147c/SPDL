@@ -1,6 +1,6 @@
-import c from "chalk"
 import { execSync, spawn } from "child_process"
 import { watch } from "chokidar"
+import { CommanderError } from "commander"
 import { readFile, unlink } from "fs/promises"
 import ora from "ora"
 import {
@@ -61,14 +61,13 @@ export default class Downloader {
         }
 
         if (options.libCheck) {
-            const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
-            const ffmpegVersionStr = execSync("ffmpeg -version").toString()
-            const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
-
-            if (!ffmpegVersion && !ytdlpVersion)
-                throw "yt-dlp and ffmpeg are missing. Run `spdl setup` Before running any command."
-
-            this.print(`yt-dlp: ${c.green(ytdlpVersion)} ffmpeg: ${c.green(ffmpegVersion)}`)
+            try {
+                execSync("yt-dlp --version")
+                execSync("ffmpeg -version")
+            } catch (error) {
+                const errMsg = "yt-dlp and ffmpeg are missing."
+                throw new CommanderError(1, "missing tools", errMsg)
+            }
         }
     }
 
