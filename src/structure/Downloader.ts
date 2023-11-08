@@ -209,6 +209,7 @@ export default class Downloader {
         const colors = ["--color", "always"]
         const switches = ["--extract-audio", "--no-playlist"]
         const format = ["--format", "ba/best", "--audio-format", "mp3"]
+        const quality = ["--audio-quality", "0"]
         const sponsorBlock = ["--sponsorblock-remove", "all"]
         const output = ["--output", outputTemplate]
 
@@ -217,6 +218,7 @@ export default class Downloader {
             ...colors,
             ...switches,
             ...format,
+            ...quality,
             ...sponsorBlock,
             ...output,
         ]
