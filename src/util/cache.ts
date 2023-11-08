@@ -9,17 +9,14 @@ export async function saveCache(inputData: unknown, fileType: CacheType, identif
     try {
         await writeFile(path, data)
     } catch (error) {
-        console.log("Failed to save cache")
-        console.log(error)
+        // eslint-disable-next-line no-console
+        console.error(error)
     }
 }
 
 export async function loadCache(fileType: CacheType, identifier: string) {
     const path = await getCachePath(`${fileType}/${identifier}.json`)
-    try {
-        const dataStr = await readFile(path, { encoding: "utf-8" })
-        return JSON.parse(dataStr)
-    } catch (err) {
-        return
-    }
+    const dataStr = await readFile(path, { encoding: "utf-8" }).catch()
+
+    if (dataStr) return JSON.parse(dataStr)
 }

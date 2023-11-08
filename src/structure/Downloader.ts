@@ -1,6 +1,6 @@
+import { CommanderError } from "@commander-js/extra-typings"
 import { execSync, spawn } from "child_process"
 import { watch } from "chokidar"
-import { CommanderError } from "commander"
 import { readFile, unlink } from "fs/promises"
 import ora from "ora"
 import {
@@ -188,17 +188,18 @@ export default class Downloader {
         if (this.songSearchLimit > 1) {
             const searchEntries = await this.searchSong(1)
 
-            if (!searchEntries?.length) {
+            if (!searchEntries?.length)
                 return this.print("Failed to get search entry from youtube music")
-            }
 
-            const duration = this.track.duration_ms / 1000
+            const duration = this.track.durationMs / 1000
 
             const sortedEntries = searchEntries.sort((a, b) => {
                 const durationDiffA = Math.abs(duration - a.duration)
                 const durationDiffB = Math.abs(duration - b.duration)
+
                 return durationDiffA - durationDiffB
             })
+
             songFindingOptions.push(sortedEntries[0].webpage_url)
         } else {
             const url = this.createSearchUrl().toString()
@@ -256,6 +257,7 @@ export default class Downloader {
     private sanitizeString(input: string): string {
         const invalidCharsRegex = /[?*<>|":/\\]+/g
         const sanitizedString = input.replace(invalidCharsRegex, "")
+
         return sanitizedString.trim()
     }
 }

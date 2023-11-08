@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console */
+
+import { InvalidArgumentError as CmdError, Command, Option } from "@commander-js/extra-typings"
 import c from "chalk"
 import { execSync } from "child_process"
-import { InvalidArgumentError as CmdError, Command, Option } from "commander"
 import { readFile } from "fs/promises"
 import process from "node:process"
 import * as path from "path"
@@ -59,9 +61,12 @@ const outputLocationOption = new Option(
 
 function customParseInt(value: string) {
     const parsedValue = parseInt(value, 10)
+
     if (isNaN(parsedValue)) throw new CmdError("Argument must a integer")
+
     return parsedValue
 }
+
 const searchLimitOption = new Option(
     "-l, --search-limit <Amount>",
     "Number of search to make before downloading a track. More than 3 isn't recommanded."
@@ -87,6 +92,7 @@ program
 function customParseFloat(value: string) {
     const parsedValue = parseFloat(value)
     if (isNaN(parsedValue)) throw new CmdError("Argument must a number")
+
     return parsedValue
 }
 

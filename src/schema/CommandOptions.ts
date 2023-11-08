@@ -1,4 +1,4 @@
-import { z } from "zod"
+import z from "zod"
 
 export default z.object({
     verbose: z.boolean(),

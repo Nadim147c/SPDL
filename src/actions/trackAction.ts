@@ -56,10 +56,7 @@ export default async function trackAction(trackUrl: string, commandOptions: unkn
         // action isn't required
     }
 
-    if (exists) {
-        print("Track already exists in that location")
-        return
-    }
+    if (exists) return print("Track already exists in that location")
 
     await downloader.downloadAudio()
 

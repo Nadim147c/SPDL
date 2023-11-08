@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 export type LoggerType = ReturnType<typeof getLogger>
 
 export function getLogger(prefix: string, verbose: boolean) {

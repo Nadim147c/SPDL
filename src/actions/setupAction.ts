@@ -48,11 +48,11 @@ export default async function setupAction(commandOptions: unknown) {
     const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
 
     if (ytdlpVersion && ffmpegVersion) {
-        print("yt-dlp and ffmpeg are already installed")
-        return
+        return print("yt-dlp and ffmpeg are already installed")
     } else {
         print("Your system doesn't have all prequired tools.")
         print("Visit: https://github.com/Nadim147c/SPDL#requirements to install these tools.")
+
         return
     }
 }

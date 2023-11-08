@@ -59,6 +59,7 @@ export default class Kugou {
         const lyricsPath = await getCachePath(`lyrics/${this.track.id}.txt`)
         try {
             const dataStr = await readFile(lyricsPath, "utf8")
+
             return dataStr
         } catch (error) {
             this.showText("failed to load cached lyrics")
@@ -112,7 +113,7 @@ export default class Kugou {
     }
 
     async getLyricsCandidate() {
-        const durationSec = this.track.duration_ms / 1000
+        const durationSec = this.track.durationMs / 1000
         const songs = await this.searchSongs()
 
         if (!songs?.data?.info) return
@@ -151,6 +152,7 @@ export default class Kugou {
             this.showText(`Searching lyrics with keyword\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = KeywordSearchResultSchema.parse(response.data)
+
             return data
         } catch (error) {
             this.print("Error searching lyrics")
@@ -173,6 +175,7 @@ export default class Kugou {
             this.showText(`Searching songs\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = SongSearchResultSchema.parse(response.data)
+
             return data
         } catch (error) {
             this.showText("Error searching songs")
@@ -193,6 +196,7 @@ export default class Kugou {
             this.showText(`Searching lyrics by hash\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = HashSearchResultSchema.parse(response.data)
+
             return data
         } catch (error) {
             this.showText("Error searching lyrics by hash")
@@ -216,6 +220,7 @@ export default class Kugou {
             this.showText(`Downloading lyrics\nID: ${id} | AccessKey: ${accessKey}\n${urlStr}`)
             const response = await axios.get(urlStr)
             const data = LyricsDataSchema.parse(response.data)
+
             return data
         } catch (error) {
             this.showText("Failed to download lyrics")
@@ -226,6 +231,7 @@ export default class Kugou {
     private normalizeTitle(title: string): string {
         const regex = /\(.*\)|（.*）|「.*」|『.*』|<.*>|《.*》|〈.*〉|＜.*＞/g
         const normalizedTitle = title.replace(regex, "")
+
         return normalizedTitle.trim()
     }
 
@@ -236,6 +242,7 @@ export default class Kugou {
             .replace(/\./g, "")
             .replace("和", "、")
         normalizedArtist = normalizedArtist.replace(/\(.*\)|（.*）/g, "")
+
         return normalizedArtist.trim()
     }
 

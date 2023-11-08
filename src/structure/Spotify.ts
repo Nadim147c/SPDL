@@ -45,6 +45,7 @@ export default class Spotify {
             print("Client tokens are missing or corrupted")
             print("Run `spdl setup` to setup your client spotify api id and secrets")
             print(error, true)
+
             return
         }
 
@@ -77,6 +78,7 @@ export default class Spotify {
         try {
             const cachedCredentials = JSON.parse(cachedCredentialsStr)
             const credentials = ClientCredentialsSchema.parse(cachedCredentials)
+
             return credentials
         } catch (error) {
             this.print("Client credentials aren't cached", true)
@@ -136,6 +138,7 @@ export default class Spotify {
         } catch (error) {
             this.print("Failed to authorize the client")
             this.print(error, true)
+
             return
         }
 
@@ -161,6 +164,7 @@ export default class Spotify {
 
         try {
             cover = await readFile(path)
+
             return cover
         } catch (error) {
             this.print(error, true)
@@ -170,6 +174,7 @@ export default class Spotify {
             const imageRes = await axios.get(url, { responseType: "arraybuffer" })
             cover = Buffer.from(imageRes.data)
             await writeFile(path, cover)
+
             return cover
         } catch (error) {
             this.print("Failed to get track cover image")

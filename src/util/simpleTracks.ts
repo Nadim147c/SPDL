@@ -8,7 +8,7 @@ export type SimpleTrack = {
     album: string
     artists: string[]
     releaseDate: string
-    duration_ms: number
+    durationMs: number
     originType: "track" | "playlist" | "album"
     playlist?: string
     coverUrl?: string
@@ -22,7 +22,7 @@ export function createSimpleTrackFromTrack(track: SpotifyTrack) {
         coverUrl: track.album.images?.[0]?.url,
         artists: track.artists.map((artist) => artist.name),
         releaseDate: track.album.release_date,
-        duration_ms: track.duration_ms,
+        durationMs: track.duration_ms,
         originType: "track",
     }
 
@@ -44,7 +44,7 @@ export function createSimpleTracksFromPlaylist(playlist: SpotifyPlaylist) {
             coverUrl: track.album.images?.[0]?.url,
             artists: track.artists.map((artist) => artist.name),
             releaseDate: track.album.release_date,
-            duration_ms: track.duration_ms,
+            durationMs: track.duration_ms,
             playlist: playlist.name,
             originType: "playlist",
         }
@@ -70,7 +70,7 @@ export function createSimpleTracksFromAlbum(album: SpotifyAlbum) {
             coverUrl: album.images?.[0]?.url,
             artists: track.artists.map((artist) => artist.name),
             releaseDate: album.release_date,
-            duration_ms: track.duration_ms,
+            durationMs: track.duration_ms,
             originType: "album",
         }
 
