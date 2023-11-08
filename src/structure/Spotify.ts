@@ -53,10 +53,7 @@ export default class Spotify {
         const tokens = tokensSchema.safeParse(tokenStr)
 
         if (tokens.success) {
-            const spotify = new this(tokens.data, verbose)
-
-            const success = await spotify.authorizeClient()
-            if (success) return spotify
+            return new this(tokens.data, verbose)
         } else {
             print("Cached tokens are corrupted.")
             print("Run `spdl setup` to reset the client tokens")
@@ -226,13 +223,13 @@ export default class Spotify {
 
         if (cachedTrack) return cachedTrack
 
-        if (!this.clientCredentials)
-            throw "Client Credentials not found. Client authorization is required."
+        if (!this.clientCredentials) {
+            const authorized = await this.authorizeClient()
+            if (!authorized) throw "Client Credentials not found. Client authorization failed."
+        }
 
         const url = new URL(`v1/tracks/${URI}`, this.baseApiURI)
-        const headers = {
-            Authorization: `Bearer ${this.clientCredentials.access_token}`,
-        }
+        const headers = { Authorization: `Bearer ${this.clientCredentials!.access_token}` }
 
         const response = await axios.get(url.toString(), { headers })
 
@@ -252,13 +249,13 @@ export default class Spotify {
 
         if (cachedPlaylist) return cachedPlaylist
 
-        if (!this.clientCredentials)
-            throw "Client Credentials not found. Client authorization is required."
+        if (!this.clientCredentials) {
+            const authorized = await this.authorizeClient()
+            if (!authorized) throw "Client Credentials not found. Client authorization failed."
+        }
 
         const url = new URL(`v1/playlists/${URI}`, this.baseApiURI)
-        const headers = {
-            Authorization: `Bearer ${this.clientCredentials.access_token}`,
-        }
+        const headers = { Authorization: `Bearer ${this.clientCredentials!.access_token}` }
 
         const response = await axios.get(url.toString(), { headers })
 
@@ -278,13 +275,13 @@ export default class Spotify {
 
         if (cachedAlbum) return cachedAlbum
 
-        if (!this.clientCredentials)
-            throw "Client Credentials not found. Client authorization is required."
+        if (!this.clientCredentials) {
+            const authorized = await this.authorizeClient()
+            if (!authorized) throw "Client Credentials not found. Client authorization failed."
+        }
 
         const url = new URL(`v1/albums/${URI}`, this.baseApiURI)
-        const headers = {
-            Authorization: `Bearer ${this.clientCredentials.access_token}`,
-        }
+        const headers = { Authorization: `Bearer ${this.clientCredentials!.access_token}` }
 
         const response = await axios.get(url.toString(), { headers })
 

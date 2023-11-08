@@ -15,8 +15,6 @@ export const albumAction: AlbumAction = async (albumUrl, options) => {
     const spotify = await Spotify.createClient(options.verbose)
     if (!spotify) return print("Failed to create spotify client")
 
-    await spotify.authorizeClient()
-
     const url = new URL(albumUrl)
     if (url.host !== "open.spotify.com") return print("Url must a spotify album url")
 

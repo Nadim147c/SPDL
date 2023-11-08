@@ -14,8 +14,6 @@ export const trackAction: TrackAction = async (trackUrl, options) => {
     const spotify = await Spotify.createClient(options.verbose)
     if (!spotify) return print("Failed to create spotify client")
 
-    await spotify.authorizeClient()
-
     const url = new URL(trackUrl)
     if (url.host !== "open.spotify.com") return print("Url must a spotify track url")
 
