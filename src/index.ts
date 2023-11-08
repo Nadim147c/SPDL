@@ -2,26 +2,29 @@
 
 /* eslint-disable no-console */
 
-import { InvalidArgumentError as CmdError, Command, Option } from "@commander-js/extra-typings"
+import { Command } from "@commander-js/extra-typings"
 import c from "chalk"
 import { execSync } from "child_process"
 import { readFile } from "fs/promises"
 import process from "node:process"
-import * as path from "path"
-import albumAction from "./actions/albumAction.js"
-import playlistAction from "./actions/playlistAction.js"
-import setupAction from "./actions/setupAction.js"
-import trackAction from "./actions/trackAction.js"
+import { albumAction } from "./actions/albumAction.js"
+import { playlistAction } from "./actions/playlistAction.js"
+import { setupAction } from "./actions/setupAction.js"
+import { trackAction } from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
-
-const cmdRunDir = process.cwd()
+import {
+    outputLocationOption,
+    searchLimitOption,
+    sleepTimeOption,
+    verbosityOption,
+} from "./util/commandOptions.js"
 
 process.chdir(projectPath)
 
 const program = new Command()
 
 try {
-    const packageJsonStr = await readFile("package.json", { encoding: "utf8" })
+    const packageJsonStr = await readFile("package.json", "utf8")
     const packageJson = JSON.parse(packageJsonStr)
 
     program.name("spdl")
@@ -44,66 +47,29 @@ try {
     console.error(error)
 }
 
-const verbosityOption = new Option(
-    "-V, --verbose",
-    "Verbosity of loging when running command"
-).default(false)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ActionType<T extends (...args: any[]) => any> = Parameters<T>[0]
 
-const pathParser = (inputPath: string) =>
-    path.isAbsolute(inputPath) ? inputPath : path.join(cmdRunDir, inputPath)
-
-const outputLocationOption = new Option(
-    "-o, --output <Path>",
-    "Directory to download the tracks/playlists"
-)
-    .argParser(pathParser)
-    .default(cmdRunDir, "Current Directory")
-
-function customParseInt(value: string) {
-    const parsedValue = parseInt(value, 10)
-
-    if (isNaN(parsedValue)) throw new CmdError("Argument must a integer")
-
-    return parsedValue
-}
-
-const searchLimitOption = new Option(
-    "-l, --search-limit <Amount>",
-    "Number of search to make before downloading a track. More than 3 isn't recommanded."
-)
-    .argParser(customParseInt)
-    .default(1, "first track")
-
-program
+const setupCommand = program
     .command("setup")
     .description("Setup client tokens and required dependency.")
     .addOption(verbosityOption)
-    .action(setupAction)
 
-program
+export type SetupAction = ActionType<typeof setupCommand.action>
+setupCommand.action(setupAction)
+
+const trackCommand = program
     .command("track")
     .description("Download a track from spotify track link.")
     .argument("url", "Url of a spotify track")
     .addOption(verbosityOption)
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
-    .action(trackAction)
 
-function customParseFloat(value: string) {
-    const parsedValue = parseFloat(value)
-    if (isNaN(parsedValue)) throw new CmdError("Argument must a number")
+export type TrackAction = ActionType<typeof trackCommand.action>
+trackCommand.action(trackAction)
 
-    return parsedValue
-}
-
-const sleepTimeOption = new Option(
-    "-s, --sleep-time <Seconds>",
-    "Amount of seconds to wait in between each track to avoid getting limited. Changing it isn't recommanded."
-)
-    .argParser(customParseFloat)
-    .default(30)
-
-program
+const playlistCommand = program
     .command("playlist")
     .description("Download a playlist from spotify playlist link")
     .argument("url", "Url of a public spotify playlist")
@@ -111,9 +77,11 @@ program
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
     .addOption(sleepTimeOption)
-    .action(playlistAction)
 
-program
+export type PlaylistAction = ActionType<typeof playlistCommand.action>
+playlistCommand.action(playlistAction)
+
+const albumCommand = program
     .command("album")
     .description("Download a album from spotify album link")
     .argument("url", "Url of spotify album")
@@ -121,6 +89,8 @@ program
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
     .addOption(sleepTimeOption)
-    .action(albumAction)
+
+export type AlbumAction = ActionType<typeof albumCommand.action>
+albumCommand.action(albumAction)
 
 program.parse(process.argv)

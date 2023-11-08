@@ -1,6 +1,6 @@
 import c from "chalk"
 import { stat } from "fs/promises"
-import CommandOptions from "../schema/CommandOptions.js"
+import type { TrackAction } from "../index.js"
 import Downloader from "../structure/Downloader.js"
 import Kugou from "../structure/Kugou.js"
 import Spotify from "../structure/Spotify.js"
@@ -8,10 +8,7 @@ import { getLogger } from "../util/logger.js"
 import printTags from "../util/printTag.js"
 import { createSimpleTrackFromTrack } from "../util/simpleTracks.js"
 
-const optionSchema = CommandOptions
-
-export default async function trackAction(trackUrl: string, commandOptions: unknown) {
-    const options = optionSchema.parse(commandOptions)
+export const trackAction: TrackAction = async (trackUrl, options) => {
     const print = getLogger("SPDL", options.verbose)
 
     const spotify = await Spotify.createClient(options.verbose)

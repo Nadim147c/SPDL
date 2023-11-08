@@ -1,19 +1,14 @@
 import { exec } from "child_process"
 import { writeFile } from "fs/promises"
 import inquirer from "inquirer"
-import z from "zod"
-import { getLogger } from "../util/logger.js"
 import { promisify } from "util"
+import type { SetupAction } from "../index.js"
 import { getConfigPath } from "../util/homePaths.js"
+import { getLogger } from "../util/logger.js"
 
 const promiseExec = promisify(exec)
 
-const optionSchema = z.object({
-    verbose: z.boolean(),
-})
-
-export default async function setupAction(commandOptions: unknown) {
-    const options = optionSchema.parse(commandOptions)
+export const setupAction: SetupAction = async (options) => {
     const print = getLogger("SPDL", options.verbose)
 
     const spotifyApiDashboard = "https://developer.spotify.com/dashboard/create"

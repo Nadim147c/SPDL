@@ -1,6 +1,6 @@
 import c from "chalk"
 import { stat } from "fs/promises"
-import z from "zod"
+import type { AlbumAction } from "../index.js"
 import Downloader from "../structure/Downloader.js"
 import Kugou from "../structure/Kugou.js"
 import Spotify from "../structure/Spotify.js"
@@ -8,14 +8,8 @@ import { getLogger } from "../util/logger.js"
 import printTags from "../util/printTag.js"
 import { SimpleTrack, createSimpleTracksFromAlbum } from "../util/simpleTracks.js"
 import sleep from "../util/sleep.js"
-import CommandOptions from "../schema/CommandOptions.js"
 
-const optionSchema = CommandOptions.extend({
-    sleepTime: z.number(),
-})
-
-export default async function albumAction(albumUrl: string, commandOptions: unknown) {
-    const options = optionSchema.parse(commandOptions)
+export const albumAction: AlbumAction = async (albumUrl, options) => {
     const print = getLogger("SPDL", options.verbose)
 
     const spotify = await Spotify.createClient(options.verbose)
