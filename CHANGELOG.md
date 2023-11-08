@@ -1,5 +1,14 @@
 # @nadim147/spdl
 
+## 0.4.1
+
+### Patch Changes
+
+-   cfdba05: avoid fetching spotify access token if data is already cached
+-   66176f8: add quality to 0 (best) in yt-dlp command
+-   b35fd63: use types instead of zod parsing in action functions
+-   be1591a: add more rules in `eslintrc`
+
 ## 0.4.0
 
 ### Minor Changes
