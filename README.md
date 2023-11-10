@@ -119,9 +119,10 @@ If you encounter any problems, have questions, or need assistance with spdl, ple
 
 While I aim to maintain this repository by myself, contributions are welcomed.
 
-> Note: I'm not a professional js developer and coding style might be confusing.
+> Note: I'm not a experienced js developer and coding style might be confusing.
 
 To contribute, [create an issue](https://github.com/Nadim147c/spdl/issues) detailing the problem you'd like to address or the feature you'd like to add. This way, we can discuss and plan the changes.
+And also I'm using changesets and run `pnpm changeset` before you commit your changes.
 
 For any questions or additional information, don't hesitate to reach out through the [issues section](https://github.com/Nadim147c/spdl/issues).
 
