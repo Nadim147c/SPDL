@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 0.4.2
+
+### Patch Changes
+
+-   efbd777: fix path error for unix based os
+
 ## 0.4.1
 
 ### Patch Changes
