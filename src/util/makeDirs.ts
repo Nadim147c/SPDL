@@ -10,11 +10,15 @@ export async function makeDirs(path: string) {
 
     for await (const directory of directories) {
         currentPath = currentPath ? `${currentPath}/${directory}` : directory
+        if (!currentPath) continue
         try {
             await stat(currentPath)
         } catch (error) {
             const validateError = z.object({ code: z.enum(["ENOENT"]) })
-            if (validateError.safeParse(error).success) await mkdir(currentPath)
+            if (validateError.safeParse(error).success) {
+                // eslint-disable-next-line no-console
+                await mkdir(currentPath).catch(console.error)
+            }
         }
     }
 }

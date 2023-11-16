@@ -14,7 +14,8 @@
         "access": "public"
     },
     "scripts": {
-        "start": "ts-node src/.",
+        "start": "tsc && node bin/.",
+        "ns": "node bin/.",
         "build": "tsc",
         "dev": "tsc -w",
         "release": "pnpm run build && changeset publish",
