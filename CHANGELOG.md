@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 0.4.3
+
+### Patch Changes
+
+-   bd2d2d3: fix song limit fixed to 1
+
 ## 0.4.2
 
 ### Patch Changes
