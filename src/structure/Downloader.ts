@@ -186,7 +186,7 @@ export default class Downloader {
         const songFindingOptions: string[] = []
 
         if (this.songSearchLimit > 1) {
-            const searchEntries = await this.searchSong(1)
+            const searchEntries = await this.searchSong(this.songSearchLimit)
 
             if (!searchEntries?.length)
                 return this.print("Failed to get search entry from youtube music")
