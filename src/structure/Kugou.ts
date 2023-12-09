@@ -103,13 +103,19 @@ export default class Kugou {
 
     async setLyrics(tags: Tags) {
         const lyrics = await this.getLyrics()
-        if (!lyrics) return this.spinner.fail("Failed to find lyrics")
+        if (!lyrics) {
+            this.spinner.fail("Failed to find lyrics")
+
+            return
+        } 
 
         tags.unsynchronisedLyrics = { language: "en", text: lyrics }
 
         if (this.spinner.isSpinning) this.spinner.stop()
 
         await NodeId3.write(tags, this.filePath)
+
+        return lyrics
     }
 
     async getLyricsCandidate() {

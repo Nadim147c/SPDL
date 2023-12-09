@@ -1,5 +1,5 @@
 import c from "chalk"
-import { stat } from "fs/promises"
+import { stat, writeFile } from "fs/promises"
 import type { AlbumAction } from "../index.js"
 import Downloader from "../structure/Downloader.js"
 import Kugou from "../structure/Kugou.js"
@@ -70,7 +70,12 @@ export const albumAction: AlbumAction = async (albumUrl, options) => {
 
         const kugou = new Kugou({ track, filePath, verbose: options.verbose })
 
-        await kugou.setLyrics(tags)
+        const lyrics = await kugou.setLyrics(tags)
+
+        if (options.lrc) {
+            const lrcFilePath = filePath.replace(/(.mp3)(?![\s\S]*\.mp3)/, ".lrc")
+            if (lyrics) writeFile(lrcFilePath, lyrics, "utf8")
+        }
 
         if (i !== tracks.length - 1) await sleep(options.sleepTime * 1000)
     }

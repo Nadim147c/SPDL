@@ -13,6 +13,7 @@ import { setupAction } from "./actions/setupAction.js"
 import { trackAction } from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
 import {
+    lrcOption,
     outputLocationOption,
     searchLimitOption,
     sleepTimeOption,
@@ -63,6 +64,7 @@ const trackCommand = program
     .description("Download a track from spotify track link.")
     .argument("url", "Url of a spotify track")
     .addOption(verbosityOption)
+    .addOption(lrcOption)
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
 
@@ -74,6 +76,7 @@ const playlistCommand = program
     .description("Download a playlist from spotify playlist link")
     .argument("url", "Url of a public spotify playlist")
     .addOption(verbosityOption)
+    .addOption(lrcOption)
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
     .addOption(sleepTimeOption)
@@ -86,6 +89,7 @@ const albumCommand = program
     .description("Download a album from spotify album link")
     .argument("url", "Url of spotify album")
     .addOption(verbosityOption)
+    .addOption(lrcOption)
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
     .addOption(sleepTimeOption)

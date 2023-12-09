@@ -6,6 +6,11 @@ export const verbosityOption = new Option(
     "Verbosity of loging when running command"
 ).default(false)
 
+export const lrcOption = new Option(
+    "--lrc",
+    "Generate .lrc file for track if lyrics exists"
+).default(false)
+
 const cmdRunDir = process.cwd()
 export const outputLocationOption = new Option(
     "-o, --output <Path>",
