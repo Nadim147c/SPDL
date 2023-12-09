@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 0.5.0
+
+### Minor Changes
+
+-   ac128ac: Add --lrc option to track, playlist and album command
+
 ## 0.4.3
 
 ### Patch Changes
