@@ -23,11 +23,12 @@ interface ConstructorOptions {
 
 export default class Downloader {
     track: SimpleTrack
-    outputPath: string
-    private trackName: string
+    outputPath: string  
+    outputTemplate: string  
+    private title: string
     private trackArtists: string
     private print: LoggerType
-    private rootLocation: string
+    private basePath: string
     private verbose: boolean
     private songSearchLimit: number
 
@@ -37,27 +38,24 @@ export default class Downloader {
         this.print = getLogger("Downloader", verbose)
 
         this.track = track
-        this.trackName = this.sanitizeString(track.name)
+        this.title = this.sanitizeString(track.name)
         this.trackArtists = track.artists.join(", ")
-        this.rootLocation = downloadLocation
+        this.basePath = downloadLocation
         this.verbose = verbose
         this.songSearchLimit = options.songSearchLimit
 
         const senitizePlaylist = this.sanitizeString(this.track.playlist ?? "")
         const senitizeAlbum = this.sanitizeString(this.track.album)
 
-        switch (track.originType) {
-            case "album":
-                this.outputPath = `${this.rootLocation}/${senitizeAlbum}/${this.trackName}.mp3`
-                break
-
-            case "playlist":
-                this.outputPath = `${this.rootLocation}/${senitizePlaylist}/${this.trackName}.mp3`
-                break
-
-            default:
-                this.outputPath = `${this.rootLocation}/${this.trackName}.mp3`
-                break
+        if (this.track.originType === "album") {
+            this.outputPath = `${this.basePath}/${senitizeAlbum}/${this.title} [${this.track.id}].mp3`
+            this.outputTemplate = `${this.basePath}/${senitizeAlbum}/${this.title} [${this.track.id}].%(ext)s`
+        } else if (this.track.originType === "playlist") {
+            this.outputPath = `${this.basePath}/${senitizePlaylist}/${this.title} [${this.track.id}].mp3`
+            this.outputTemplate = `${this.basePath}/${senitizePlaylist}/${this.title} [${this.track.id}].%(ext)s`
+        } else {
+            this.outputPath = `${this.basePath}/${this.title} [${this.track.id}].mp3`
+            this.outputTemplate = `${this.basePath}/${this.title} [${this.track.id}].%(ext)s`
         }
 
         if (options.libCheck) {
@@ -71,8 +69,9 @@ export default class Downloader {
         }
     }
 
+
     private createSearchUrl() {
-        const searchQuery = `${this.trackName} - ${this.trackArtists}`
+        const searchQuery = `${this.title} - ${this.trackArtists}`
 
         const url = new URL("search", "https://music.youtube.com")
         url.searchParams.set("q", searchQuery)
@@ -165,24 +164,6 @@ export default class Downloader {
     async downloadAudio() {
         this.print(`Download path: ${this.outputPath}`)
 
-        const trackName = this.trackName
-        let outputTemplate: string
-
-        const senitizePlaylist = this.sanitizeString(this.track.playlist ?? "")
-        const senitizeAlbum = this.sanitizeString(this.track.album)
-
-        switch (this.track.originType) {
-            case "album":
-                outputTemplate = `${this.rootLocation}/${senitizeAlbum}/${trackName}.%(ext)s`
-                break
-            case "playlist":
-                outputTemplate = `${this.rootLocation}/${senitizePlaylist}/${trackName}.%(ext)s`
-                break
-            default:
-                outputTemplate = `${this.rootLocation}/${trackName}.%(ext)s`
-                break
-        }
-
         const songFindingOptions: string[] = []
 
         if (this.songSearchLimit > 1) {
@@ -211,7 +192,7 @@ export default class Downloader {
         const format = ["--format", "ba/best", "--audio-format", "mp3"]
         const quality = ["--audio-quality", "0"]
         const sponsorBlock = ["--sponsorblock-remove", "all"]
-        const output = ["--output", outputTemplate]
+        const output = ["--output", this.outputTemplate]
 
         const ytDlpArgs = [
             ...songFindingOptions,
