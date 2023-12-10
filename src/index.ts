@@ -13,12 +13,20 @@ import { setupAction } from "./actions/setupAction.js"
 import { trackAction } from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
 import {
+    albumsOption,
+    allOption,
+    imagesOption,
     lrcOption,
     outputLocationOption,
+    playlistsOption,
     searchLimitOption,
     sleepTimeOption,
+    tokensOption,
+    tracksOption,
     verbosityOption,
 } from "./util/commandOptions.js"
+import { clearCacheAction } from "./actions/clearCache.js"
+import { getLogger } from "./util/logger.js"
 
 process.chdir(projectPath)
 
@@ -58,6 +66,31 @@ const setupCommand = program
 
 export type SetupAction = ActionType<typeof setupCommand.action>
 setupCommand.action(setupAction)
+
+const clearCacheCommand = program
+    .command("clear-cache")
+    .description("Clear cached images, tracks, albums, playlists and tokens.")
+    .addOption(verbosityOption)
+    .addOption(allOption)
+    .addOption(imagesOption)
+    .addOption(tracksOption)
+    .addOption(albumsOption)
+    .addOption(playlistsOption)
+    .addOption(tokensOption)
+
+export type ClearCacheAction = ActionType<typeof clearCacheCommand.action>
+clearCacheCommand.action((options) => {
+    const { all, images, tracks, albums, playlists, verbose } = options
+    const print = getLogger("SPDl", verbose)
+
+    if (!images && !tracks && !albums && !playlists && !all) {
+        print("Please provide a option")
+        const helpInfo = clearCacheCommand.helpInformation({ error: true })
+        print(helpInfo)
+    } else {
+        clearCacheAction(options, clearCacheCommand)
+    }
+})
 
 const trackCommand = program
     .command("track")
