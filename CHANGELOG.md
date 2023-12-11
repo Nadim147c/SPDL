@@ -1,5 +1,12 @@
 # @nadim147/spdl
 
+## 0.6.0
+
+### Minor Changes
+
+-   1ad2976: add clear-cache command
+-   628c613: add id after name
+
 ## 0.5.0
 
 ### Minor Changes
