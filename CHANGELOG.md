@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 0.6.1
+
+### Patch Changes
+
+-   77139b6: fix adding metadate even if lyrics is missing
+
 ## 0.6.0
 
 ### Minor Changes
