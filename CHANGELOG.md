@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 1.0.0
+
+### Major Changes
+
+-   d0d3970: Downloading now the default command. So, you don't have to use `spdl track url`. Instead use `spdl url`.
+
 ## 0.6.1
 
 ### Patch Changes
