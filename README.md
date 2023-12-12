@@ -102,14 +102,16 @@ Run `spdl` or `spdl --help` to get the help menu.
 To download a track, run:
 
 ```
-spdl track [spotify_track_url]
+spdl [spotify_track_url]
 ```
 
 To download a playlist, run: `Only for public playlist`
 
 ```
-spdl playlist [spotify_playlist_url]
+spdl [spotify_playlist_url]
 ```
+
+Same is for albums. `spdl [spotify_album_url]` to download an album.
 
 The most up-to-date and accurate information about parameters can be found in the built-in help menu (`spdl -h`). Any changes in command and their usage will be available there.
 

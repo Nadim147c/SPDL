@@ -2,16 +2,17 @@
 
 /* eslint-disable no-console */
 
-import { Command } from "@commander-js/extra-typings"
+import { Argument, Command } from "@commander-js/extra-typings"
 import c from "chalk"
 import { execSync } from "child_process"
-import { readFile } from "fs/promises"
+import { readFile, writeFile } from "fs/promises"
 import process from "node:process"
-import { albumAction } from "./actions/albumAction.js"
-import { playlistAction } from "./actions/playlistAction.js"
+import { clearCacheAction } from "./actions/clearCache.js"
 import { setupAction } from "./actions/setupAction.js"
-import { trackAction } from "./actions/trackAction.js"
 import { projectPath } from "./dirname.cjs"
+import Downloader from "./structure/Downloader.js"
+import Kugou from "./structure/Kugou.js"
+import Spotify from "./structure/Spotify.js"
 import {
     albumsOption,
     allOption,
@@ -25,8 +26,16 @@ import {
     tracksOption,
     verbosityOption,
 } from "./util/commandOptions.js"
-import { clearCacheAction } from "./actions/clearCache.js"
+import { isExists } from "./util/isExists.js"
 import { getLogger } from "./util/logger.js"
+import printTags from "./util/printTag.js"
+import {
+    SimpleTrack,
+    createSimpleTrackFromTrack,
+    createSimpleTracksFromAlbum,
+    createSimpleTracksFromPlaylist,
+} from "./util/simpleTracks.js"
+import sleep from "./util/sleep.js"
 
 process.chdir(projectPath)
 
@@ -39,18 +48,6 @@ try {
     program.name("spdl")
     program.version(packageJson.version, "-v, version", "Get current version")
     program.description(packageJson.description)
-
-    program.action(() => {
-        const ytdlpVersion = execSync("yt-dlp --version").toString().trim()
-        const ffmpegVersionStr = execSync("ffmpeg -version").toString()
-        const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)
-
-        console.log(`SPDL: ${c.green(packageJson.version)}`)
-        console.log(`YT-DLP: ${c.green(ytdlpVersion)}`)
-        console.log(`FFMPEG: ${c.green(ffmpegVersion)}`)
-        console.log("\n", packageJson.description)
-        console.log("\nRun `spdl --help` to get the help menu.")
-    })
 } catch (error) {
     console.log("Failed to get package.json data")
     console.error(error)
@@ -92,42 +89,141 @@ clearCacheCommand.action((options) => {
     }
 })
 
-const trackCommand = program
-    .command("track")
-    .description("Download a track from spotify track link.")
-    .argument("url", "Url of a spotify track")
-    .addOption(verbosityOption)
-    .addOption(lrcOption)
-    .addOption(outputLocationOption)
-    .addOption(searchLimitOption)
+const missingUrlText = [
+    `Missing argument '${c.green("url")}'`,
+    `Use: '${c.yellow("spdl")} [${c.cyan("options")}] [${c.green("url")}]'`,
+    `Use: '${c.yellow("spdl")} ${c.cyan("--help")}' for more information.`,
+].join("\n")
 
-export type TrackAction = ActionType<typeof trackCommand.action>
-trackCommand.action(trackAction)
+const urlArgument = new Argument("[url]", "URL of the track, playlist or album.")
 
-const playlistCommand = program
-    .command("playlist")
-    .description("Download a playlist from spotify playlist link")
-    .argument("url", "Url of a public spotify playlist")
+program
+    .addArgument(urlArgument)
     .addOption(verbosityOption)
     .addOption(lrcOption)
     .addOption(outputLocationOption)
     .addOption(searchLimitOption)
     .addOption(sleepTimeOption)
+    .action(async (inputUrl, options) => {
+        if (!inputUrl) return console.log(missingUrlText)
 
-export type PlaylistAction = ActionType<typeof playlistCommand.action>
-playlistCommand.action(playlistAction)
+        const { verbose, output, searchLimit } = options
+        const print = getLogger("SPDL", verbose)
 
-const albumCommand = program
-    .command("album")
-    .description("Download a album from spotify album link")
-    .argument("url", "Url of spotify album")
-    .addOption(verbosityOption)
-    .addOption(lrcOption)
-    .addOption(outputLocationOption)
-    .addOption(searchLimitOption)
-    .addOption(sleepTimeOption)
+        const spotify = await Spotify.createClient(verbose)
+        if (!spotify) return print("Failed to create spotify client")
 
-export type AlbumAction = ActionType<typeof albumCommand.action>
-albumCommand.action(albumAction)
+        const url = new URL(inputUrl)
+        if (url.host !== "open.spotify.com") return print("Url must a spotify track url")
+
+        const [uriType, uri] = url.pathname.split("/").slice(1)
+
+        if (!uri) return print("Failed to get the uri from the url")
+
+        if (uriType === "track") {
+            const track = await spotify.getTrack(uri)
+
+            if (!track) return print("Failed find the track from the url")
+
+            const simpleTrack = createSimpleTrackFromTrack(track)
+
+            print(c.blue(`Downloading "${simpleTrack.name}"`))
+
+            const tags = await spotify.getTags(simpleTrack)
+            printTags(tags)
+
+            const downloader = new Downloader({
+                track: simpleTrack,
+                verbose: verbose,
+                downloadLocation: output,
+                songSearchLimit: searchLimit,
+                libCheck: true,
+            })
+
+            const filePath = downloader.outputPath
+
+            const exists = await isExists(filePath)
+
+            if (exists) return print("Track already exists in that location")
+
+            await downloader.downloadAudio()
+
+            const kugou = new Kugou({ track: simpleTrack, filePath, verbose })
+
+            const lyrics = await kugou.setLyrics(tags)
+
+            if (options.lrc) {
+                const lrcFilePath = filePath.replace(/(.mp3)(?![\s\S]*\.mp3)/, ".lrc")
+                if (lyrics) writeFile(lrcFilePath, lyrics, "utf8")
+            }
+        } else if (uriType !== "playlist" && uriType !== "album") {
+            return print("Invalid url. Please provide a spotify track, playlist or album url.")
+        }
+
+        let tracks: SimpleTrack[] = []
+
+        if (uriType === "playlist") {
+            const playlist = await spotify.getPlaylist(uri)
+
+            if (!playlist) return print("Failed find the track from the url")
+
+            if (!playlist.tracks?.items?.length) return print("No track found in the playlist")
+
+            print(`Downloading playlist : ${playlist.name}`)
+
+            tracks = createSimpleTracksFromPlaylist(playlist)
+        } else if (uriType === "album") {
+            const album = await spotify.getAlbum(uri)
+
+            if (!album) return print("Failed find the track from the url")
+
+            if (!album.tracks?.items?.length) return print("No track found in the album")
+
+            print(`Downloading album : ${album.name}`)
+
+            tracks = createSimpleTracksFromAlbum(album)
+        }
+
+        for (let i = 0; i < tracks.length; i++) {
+            const track = tracks[i] as SimpleTrack
+
+            print(`${c.green(i + 1)}/${c.yellow(tracks.length)}`)
+
+            print(c.blue(`Downloading "${track.name}"`))
+
+            const tags = await spotify.getTags(track)
+            printTags(tags)
+
+            const downloader = new Downloader({
+                track,
+                verbose,
+                downloadLocation: output,
+                songSearchLimit: searchLimit,
+                libCheck: i === 0,
+            })
+
+            const filePath = downloader.outputPath
+
+            const exists = await isExists(filePath)
+
+            if (exists) {
+                print("Track already exists in that location")
+                continue
+            }
+
+            await downloader.downloadAudio()
+
+            const kugou = new Kugou({ track, filePath, verbose })
+
+            const lyrics = await kugou.setLyrics(tags)
+
+            if (options.lrc) {
+                const lrcFilePath = filePath.replace(/(.mp3)(?![\s\S]*\.mp3)/, ".lrc")
+                if (lyrics) writeFile(lrcFilePath, lyrics, "utf8")
+            }
+
+            if (i !== tracks.length - 1) await sleep(options.sleepTime * 1000)
+        }
+    })
 
 program.parse(process.argv)
