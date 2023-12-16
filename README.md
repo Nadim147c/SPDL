@@ -76,10 +76,10 @@ To install manually, follow these steps:
     npm install
     ```
 
-3.  Linking globally:
+3.  Linking:
 
     ```bash
-    npm link -g
+    npm link
     ```
 
 4.  Build:
