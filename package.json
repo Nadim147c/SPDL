@@ -1,6 +1,6 @@
 {
     "name": "@nadim147/spdl",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A yt-dlp downloader that uses Spotify track metadata.",
     "type": "module",
     "main": "./bin/index.js",

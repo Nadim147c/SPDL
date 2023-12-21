@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 1.0.1
+
+### Patch Changes
+
+-   9006105: fix wrong cache directory name
+
 ## 1.0.0
 
 ### Major Changes
