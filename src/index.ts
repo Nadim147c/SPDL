@@ -4,7 +4,6 @@
 
 import { Argument, Command } from "@commander-js/extra-typings"
 import c from "chalk"
-import { execSync } from "child_process"
 import { readFile, writeFile } from "fs/promises"
 import process from "node:process"
 import { clearCacheAction } from "./actions/clearCache.js"
