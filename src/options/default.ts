@@ -1,14 +1,14 @@
 import { Option } from "@commander-js/extra-typings"
-import { customParseFloat, customParseInt, pathParser } from "./customParser.js"
-
-export const verbosityOption = new Option(
-    "-V, --verbose",
-    "Verbosity of loging when running command"
-).default(false)
+import { customParseFloat, customParseInt, pathParser } from "../util/customParser.js"
 
 export const lrcOption = new Option(
     "--lrc",
     "Generate .lrc file for track if lyrics exists"
+).default(false)
+
+export const verbosityOption = new Option(
+    "-V, --verbose",
+    "Verbosity of loging when running command"
 ).default(false)
 
 const cmdRunDir = process.cwd()
@@ -32,11 +32,3 @@ export const sleepTimeOption = new Option(
 )
     .argParser(customParseFloat)
     .default(30)
-
-// Clear Cache Options
-export const allOption = new Option("--all", "Remove all caches.").default(false)
-export const tracksOption = new Option("--tracks", "Remove track caches.").default(false)
-export const imagesOption = new Option("--images", "Remove image caches.").default(false)
-export const albumsOption = new Option("--albums", "Remove album caches.").default(false)
-export const playlistsOption = new Option("--playlists", "Remove playlist caches.").default(false)
-export const tokensOption = new Option("--tokens", "Remove token caches.").default(false)
