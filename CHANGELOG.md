@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 1.0.2
+
+### Patch Changes
+
+-   497ab80: fix clear-cache wrong names
+
 ## 1.0.1
 
 ### Patch Changes
