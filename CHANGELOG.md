@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 1.1.0
+
+### Minor Changes
+
+-   4c0bf1e: add faster song search using youtubei.js
+
 ## 1.0.2
 
 ### Patch Changes
