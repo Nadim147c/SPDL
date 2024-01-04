@@ -1,15 +1,7 @@
 import { CommanderError } from "@commander-js/extra-typings"
 import { execSync, spawn } from "child_process"
-import { watch } from "chokidar"
-import { readFile, unlink } from "fs/promises"
 import ora from "ora"
-import {
-    YouTubeMusicSearch,
-    YouTubeMusicSearchNonEmptey,
-    youtubeMusicSearchSchema,
-    youtubeMusicSongSchema,
-} from "../schema/YTDLP/Search.js"
-import { getCachePath } from "../util/homePaths.js"
+import Innertube from "youtubei.js"
 import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
 
@@ -23,8 +15,8 @@ interface ConstructorOptions {
 
 export default class Downloader {
     track: SimpleTrack
-    outputPath: string  
-    outputTemplate: string  
+    outputPath: string
+    outputTemplate: string
     private title: string
     private trackArtists: string
     private print: LoggerType
@@ -69,7 +61,6 @@ export default class Downloader {
         }
     }
 
-
     private createSearchUrl() {
         const searchQuery = `${this.title} - ${this.trackArtists}`
 
@@ -81,84 +72,28 @@ export default class Downloader {
     }
 
     async searchSong(songSearchLimit: number) {
-        const url = this.createSearchUrl()
+        const youtube = await Innertube.create()
+        const searchTerm = `${this.track.artists[0]} - ${this.track.name}`
 
-        const cacheDir = await getCachePath("yt-dlp")
-
-        const json = "--write-info-json"
-        const noDownload = "--skip-download"
-        const limit = ["--playlist-end", songSearchLimit.toString()]
-        const colors = ["--color", "always"]
-        const outputTemplate = ["--output", `${cacheDir}\\%(playlist_index)s.%(ext)s`]
-
-        const title = "Searching song"
-
-        const spinner = ora({ text: title, color: "cyan", spinner: "arc" })
-
-        let consoleText = `${title}:\n`
-
-        const showText = (input: unknown) => {
-            if (this.verbose) {
-                consoleText += `\n${input}`
-                spinner.text = consoleText
-            } else {
-                spinner.text = `${title}:\n${input}`
-            }
+        let search
+        try {
+            search = await youtube.music.search(searchTerm, { type: "song" })
+        } catch (_) {
+            return
         }
 
-        spinner.start()
+        const allowedEntries = search?.songs?.contents?.slice(0, songSearchLimit) ?? []
 
-        const urlStr = url.toString()
+        const duration = this.track.durationMs / 1000
 
-        const songSearchArgs: string[] = [
-            urlStr,
-            json,
-            noDownload,
-            ...limit,
-            ...colors,
-            ...outputTemplate,
-        ]
+        const sortedEntries = allowedEntries.sort((a, b) => {
+            const durationDiffA = Math.abs(duration - a!.duration!.seconds ?? 0)
+            const durationDiffB = Math.abs(duration - b!.duration!.seconds ?? 0)
 
-        const results: YouTubeMusicSearch = []
-
-        const jsonWatcher = watch(cacheDir)
-
-        jsonWatcher.on("add", async (path) => {
-            if (!path.endsWith(".json")) return
-
-            const dataStr = await readFile(path, "utf8")
-
-            try {
-                const data = JSON.parse(dataStr)
-                const song = youtubeMusicSongSchema.safeParse(data)
-                song.success ? results.push(song.data) : showText("Failed to load json data")
-                await unlink(path)
-            } catch (error) {
-                this.print(error, true)
-            }
+            return durationDiffA - durationDiffB
         })
 
-        const ytDlpProcess = spawn("yt-dlp", songSearchArgs)
-
-        return new Promise<YouTubeMusicSearchNonEmptey>((resolve, reject) => {
-            ytDlpProcess.stdout.on("data", showText)
-            ytDlpProcess.stderr.on("data", showText)
-
-            ytDlpProcess.on("close", (code) => {
-                if (code !== 0) return reject("Failed to search song")
-
-                const data = youtubeMusicSearchSchema.safeParse(results)
-                if (!data.success) return reject("Song search results is 0")
-
-                jsonWatcher.close()
-
-                this.verbose ? spinner.succeed() : spinner.stop()
-
-                resolve(data.data)
-            })
-
-            ytDlpProcess.on("error", reject)
-        })
+        return sortedEntries[0]?.id
     }
 
     async downloadAudio() {
@@ -167,21 +102,11 @@ export default class Downloader {
         const songFindingOptions: string[] = []
 
         if (this.songSearchLimit > 1) {
-            const searchEntries = await this.searchSong(this.songSearchLimit)
+            const id = await this.searchSong(this.songSearchLimit)
 
-            if (!searchEntries?.length)
-                return this.print("Failed to get search entry from youtube music")
+            if (!id) return this.print("Failed to get search entry from youtube music")
 
-            const duration = this.track.durationMs / 1000
-
-            const sortedEntries = searchEntries.sort((a, b) => {
-                const durationDiffA = Math.abs(duration - a.duration)
-                const durationDiffB = Math.abs(duration - b.duration)
-
-                return durationDiffA - durationDiffB
-            })
-
-            songFindingOptions.push(sortedEntries[0].webpage_url)
+            songFindingOptions.push(`https://www.youtube.com/watch?v=${id}`)
         } else {
             const url = this.createSearchUrl().toString()
             songFindingOptions.push(url, "--playlist-end", "1")

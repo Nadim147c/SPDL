@@ -2,7 +2,7 @@ import { Option } from "@commander-js/extra-typings"
 import { customParseFloat, customParseInt, pathParser } from "../util/customParser.js"
 
 export const lrcOption = new Option(
-    "--lrc",
+    "--write-lrc",
     "Generate .lrc file for track if lyrics exists"
 ).default(false)
 
@@ -24,7 +24,7 @@ export const searchLimitOption = new Option(
     "Number of search to make before downloading a track. More than 3 isn't recommanded."
 )
     .argParser(customParseInt)
-    .default(1, "first track")
+    .default(3, "first track")
 
 export const sleepTimeOption = new Option(
     "-s, --sleep-time <Seconds>",

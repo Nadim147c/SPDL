@@ -64,13 +64,17 @@ export const defaultAction: DefaultAction = async (inputUrl, options) => {
 
         if (exists) return print("Track already exists in that location")
 
-        await downloader.downloadAudio()
+        try {
+            await downloader.downloadAudio()
+        } catch (error) {
+            print(`Failed Downloading Song: ${error instanceof Error ? error?.message : ""}`)
+        }
 
         const kugou = new Kugou({ track: simpleTrack, filePath, verbose })
 
         const lyrics = await kugou.setLyrics(tags)
 
-        if (options.lrc) {
+        if (options.writeLrc) {
             const lrcFilePath = filePath.replace(/(.mp3)(?![\s\S]*\.mp3)/, ".lrc")
             if (lyrics) writeFile(lrcFilePath, lyrics, "utf8")
         }
@@ -129,13 +133,18 @@ export const defaultAction: DefaultAction = async (inputUrl, options) => {
             continue
         }
 
-        await downloader.downloadAudio()
+        try {
+            await downloader.downloadAudio()
+        } catch (error) {
+            print(`Failed Downloading Song: ${error instanceof Error ? error?.message : ""}`)
+            continue
+        }
 
         const kugou = new Kugou({ track, filePath, verbose })
 
         const lyrics = await kugou.setLyrics(tags)
 
-        if (options.lrc) {
+        if (options.writeLrc) {
             const lrcFilePath = filePath.replace(/(.mp3)(?![\s\S]*\.mp3)/, ".lrc")
             if (lyrics) writeFile(lrcFilePath, lyrics, "utf8")
         }
