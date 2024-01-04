@@ -55,7 +55,7 @@ body:
           multiple: true
           options:
               - Windows
-              - GUN/Linux
+              - GNU/Linux
               - MacOS
               - Other
           default: 0
