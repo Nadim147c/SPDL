@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 1.2.0
+
+### Minor Changes
+
+-   ccf8db3: update logging system
+
 ## 1.1.0
 
 ### Minor Changes
