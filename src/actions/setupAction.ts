@@ -1,19 +1,18 @@
-import { exec, spawn } from "child_process"
+/* eslint-disable no-console */
+import { exec } from "child_process"
 import { writeFile } from "fs/promises"
 import inquirer from "inquirer"
 import { promisify } from "util"
 import type { SetupAction } from "../index.js"
 import { getConfigPath } from "../util/homePaths.js"
-import { getLogger } from "../util/logger.js"
 
 const promiseExec = promisify(exec)
 
-export const setupAction: SetupAction = async (options) => {
-    const print = getLogger("SPDL", options.verbose)
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const setupAction: SetupAction = async (_) => {
     const spotifyApiDashboard = "https://developer.spotify.com/dashboard/create"
 
-    print(`Create a spotify app from: ${spotifyApiDashboard}`)
+    console.log("[SPDL]", `Create a spotify app from: ${spotifyApiDashboard}`)
 
     const questions = [
         {
@@ -36,16 +35,19 @@ export const setupAction: SetupAction = async (options) => {
 
     await writeFile(tokensPath, data, { encoding: "utf8" })
 
-    print("Client tokens have been set")
+    console.log("[SPDL]", "Client tokens have been set")
 
     const ytdlpVersion = (await promiseExec("yt-dlp --version")).stdout.toString().trim()
     const ffmpegVersionStr = (await promiseExec("ffmpeg -version")).stdout.toString() ?? ""
     const ffmpegVersion = ffmpegVersionStr.match(/\d+\.\d+/)?.[0]?.trim()
 
     if (ytdlpVersion && ffmpegVersion) {
-        return print("yt-dlp and ffmpeg are already installed")
+        return console.log("[SPDL]", "yt-dlp and ffmpeg are already installed")
     } else {
-        print("Your system doesn't have all prequired tools.")
-        print("Visit: https://github.com/Nadim147c/SPDL#requirements to install these tools.")
+        console.log("[SPDL]", "Your system doesn't have all prequired tools.")
+        console.log(
+            "[SPDL]",
+            "Visit: https://github.com/Nadim147c/SPDL#requirements to install these tools."
+        )
     }
 }

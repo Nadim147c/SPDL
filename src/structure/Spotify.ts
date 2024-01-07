@@ -12,8 +12,8 @@ import { SpotifyPlaylistSchema } from "../schema/Spotify/Playlist.js"
 import { SpotifyTrackSchema } from "../schema/Spotify/Track.js"
 import { loadCache, saveCache } from "../util/cache.js"
 import { getCachePath, getConfigPath } from "../util/homePaths.js"
-import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
+import Logger from "./Logger.js"
 
 type LoadSpotifyDataCache<T extends z.Schema> = {
     type: "track" | "playlist" | "album"
@@ -24,27 +24,27 @@ type LoadSpotifyDataCache<T extends z.Schema> = {
 export default class Spotify {
     baseApiURI = "https://api.spotify.com/"
     port = 1110
-    print: LoggerType
+
+    log: Logger
 
     private clientCredentials: ClientCredentials | undefined
     private tokens
 
-    private constructor(tokens: string, verbose: boolean) {
+    private constructor(tokens: string, logger: Logger) {
         this.tokens = tokens
-        this.print = getLogger("Spotify", verbose)
+        this.log = logger
     }
 
-    static async createClient(verbose: boolean) {
-        const print = getLogger("Spotify", verbose)
-
+    static async createClient(logger: Logger) {
+        const log = logger
         let tokenStr
         try {
             const tokenFile = await getConfigPath(".tokens")
             tokenStr = await readFile(tokenFile, { encoding: "utf8" })
         } catch (error) {
-            print("Client tokens are missing or corrupted")
-            print("Run `spdl setup` to setup your client spotify api id and secrets")
-            print(error, true)
+            log.show("Client tokens are missing or corrupted")
+            log.show("Run `spdl setup` to setup your client spotify api id and secrets")
+            log.show(error, true)
 
             return
         }
@@ -53,11 +53,11 @@ export default class Spotify {
         const tokens = tokensSchema.safeParse(tokenStr)
 
         if (tokens.success) {
-            return new this(tokens.data, verbose)
+            return new this(tokens.data, log)
         } else {
-            print("Cached tokens are corrupted.")
-            print("Run `spdl setup` to reset the client tokens")
-            print(tokens.error, true)
+            log.show("Cached tokens are corrupted.")
+            log.show("Run `spdl setup` to reset the client tokens")
+            log.show(tokens.error, true)
         }
     }
 
@@ -67,7 +67,7 @@ export default class Spotify {
             const accessTokenPath = await getCachePath("access-token.json")
             cachedCredentialsStr = await readFile(accessTokenPath, { encoding: "utf8" })
         } catch (error) {
-            this.print("Client access token is missing", true)
+            this.log.show("Client access token is missing", true)
         }
 
         if (!cachedCredentialsStr) return
@@ -78,8 +78,8 @@ export default class Spotify {
 
             return credentials
         } catch (error) {
-            this.print("Client credentials aren't cached", true)
-            this.print(error, true)
+            this.log.show("Client credentials aren't cached", true)
+            this.log.show(error, true)
         }
     }
 
@@ -114,7 +114,7 @@ export default class Spotify {
 
         if (!refetch) return isAuthorizationCompleted
 
-        this.print("Fetching access token from client ID and SECRET")
+        this.log.show("Fetching access token from client ID and SECRET")
         const headers = {
             Authorization: `Basic ${Buffer.from(this.tokens).toString("base64")}`,
             "Content-Type": "application/x-www-form-urlencoded",
@@ -133,8 +133,8 @@ export default class Spotify {
 
             isAuthorizationCompleted = true
         } catch (error) {
-            this.print("Failed to authorize the client")
-            this.print(error, true)
+            this.log.show("Failed to authorize the client")
+            this.log.show(error, true)
 
             return
         }
@@ -143,8 +143,8 @@ export default class Spotify {
             const accessTokenPath = await getCachePath("access-token.json", false)
             await writeFile(accessTokenPath, JSON.stringify(this.clientCredentials))
         } catch (error) {
-            this.print("Failed to cache client credentials")
-            this.print(error, true)
+            this.log.show("Failed to cache client credentials")
+            this.log.show(error, true)
         }
 
         return isAuthorizationCompleted
@@ -153,7 +153,7 @@ export default class Spotify {
     async getTrackCover(url: string) {
         const coverId = url.split("/").at(-1)
 
-        if (!coverId) return this.print("Failed to file name from the cover url")
+        if (!coverId) return this.log.show("Failed to file name from the cover url")
 
         const path = await getCachePath(`image/${coverId}.jpg`)
 
@@ -161,21 +161,19 @@ export default class Spotify {
 
         try {
             cover = await readFile(path)
-
             return cover
         } catch (error) {
-            this.print(error, true)
+            this.log.show(error, true)
         }
 
         try {
             const imageRes = await axios.get(url, { responseType: "arraybuffer" })
             cover = Buffer.from(imageRes.data)
             await writeFile(path, cover)
-
             return cover
         } catch (error) {
-            this.print("Failed to get track cover image")
-            this.print(error, true)
+            this.log.show("Failed to get track cover image")
+            this.log.show(error, true)
         }
     }
 
@@ -210,7 +208,7 @@ export default class Spotify {
             const data = options.schema.parse(cachedData)
             if (cachedData) return data as z.infer<T>
         } catch (error) {
-            this.print(error, true)
+            this.log.show(error, true)
         }
     }
 

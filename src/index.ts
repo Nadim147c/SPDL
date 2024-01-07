@@ -25,7 +25,6 @@ import {
     sleepTimeOption,
     verbosityOption,
 } from "./options/default.js"
-import { getLogger } from "./util/logger.js"
 
 process.chdir(projectPath)
 
@@ -67,13 +66,12 @@ const clearCacheCommand = program
 
 export type ClearCacheAction = ActionType<typeof clearCacheCommand.action>
 clearCacheCommand.action((options) => {
-    const { all, images, tracks, albums, playlists, verbose } = options
-    const print = getLogger("SPDl", verbose)
+    const { all, images, tracks, albums, playlists } = options
 
     if (!images && !tracks && !albums && !playlists && !all) {
-        print(c.red("Please provide a option"))
+        console.log("[SPDL]", c.red("Please provide a option"))
         const helpInfo = clearCacheCommand.helpInformation({ error: true })
-        print(helpInfo)
+        console.log("[SPDL]", helpInfo)
     } else {
         clearCacheAction(options, clearCacheCommand)
     }

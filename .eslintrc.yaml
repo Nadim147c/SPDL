@@ -20,7 +20,6 @@ rules:
     no-return-await: error
     no-loop-func: error
     no-lonely-if: error
-    newline-before-return: error
     no-irregular-whitespace: error
     no-unmodified-loop-condition: error
     no-unreachable: error

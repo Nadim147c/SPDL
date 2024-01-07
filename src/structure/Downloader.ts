@@ -1,11 +1,11 @@
 import { CommanderError } from "@commander-js/extra-typings"
 import { execSync, spawn } from "child_process"
-import ora from "ora"
 import Innertube from "youtubei.js"
-import { LoggerType, getLogger } from "../util/logger.js"
 import { SimpleTrack } from "../util/simpleTracks.js"
+import Logger from "./Logger.js"
 
 interface ConstructorOptions {
+    logger: Logger
     track: SimpleTrack
     verbose: boolean
     downloadLocation: string
@@ -15,25 +15,22 @@ interface ConstructorOptions {
 
 export default class Downloader {
     track: SimpleTrack
+    log: Logger
     outputPath: string
     outputTemplate: string
     private title: string
     private trackArtists: string
-    private print: LoggerType
     private basePath: string
-    private verbose: boolean
     private songSearchLimit: number
 
     constructor(options: ConstructorOptions) {
-        const { track, verbose, downloadLocation } = options
+        const { track, downloadLocation, logger } = options
 
-        this.print = getLogger("Downloader", verbose)
-
+        this.log = logger
         this.track = track
         this.title = this.sanitizeString(track.name)
         this.trackArtists = track.artists.join(", ")
         this.basePath = downloadLocation
-        this.verbose = verbose
         this.songSearchLimit = options.songSearchLimit
 
         const senitizePlaylist = this.sanitizeString(this.track.playlist ?? "")
@@ -97,14 +94,14 @@ export default class Downloader {
     }
 
     async downloadAudio() {
-        this.print(`Download path: ${this.outputPath}`)
+        this.log.show(`Download path: ${this.outputPath}`)
 
         const songFindingOptions: string[] = []
 
         if (this.songSearchLimit > 1) {
             const id = await this.searchSong(this.songSearchLimit)
 
-            if (!id) return this.print("Failed to get search entry from youtube music")
+            if (!id) return this.log.show("Failed to get search entry from youtube music")
 
             songFindingOptions.push(`https://www.youtube.com/watch?v=${id}`)
         } else {
@@ -129,32 +126,15 @@ export default class Downloader {
             ...output,
         ]
 
-        const title = "Downloading audio"
-
-        const spinner = ora({ text: title, color: "cyan", spinner: "arc" })
-
-        let consoleText = `${title}:\n`
-
-        const showText = (input: unknown) => {
-            if (this.verbose) {
-                consoleText += `\n${input}`
-                spinner.text = consoleText
-            } else {
-                spinner.text = `${title}:\n${input}`
-            }
-        }
-
-        spinner.start()
-
         const ytDlpProcess = spawn("yt-dlp", ytDlpArgs)
 
         return new Promise((resolve, reject) => {
-            ytDlpProcess.stdout.on("data", showText)
-            ytDlpProcess.stderr.on("data", showText)
+            ytDlpProcess.stdout.on("data", (data) => this.log.show(data.toString()))
+            ytDlpProcess.stderr.on("data", (data) => this.log.show(data.toString()))
             ytDlpProcess.on("close", (code) => {
                 if (code !== 0) return reject("failed to download the audio")
 
-                this.verbose ? spinner.succeed() : spinner.stop()
+                this.log.show("Completed downloading the audio file")
 
                 resolve(code)
             })
