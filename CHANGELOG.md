@@ -1,5 +1,11 @@
 # @nadim147/spdl
 
+## 1.2.1
+
+### Patch Changes
+
+-   519e2cf: refector code style
+
 ## 1.2.0
 
 ### Minor Changes
