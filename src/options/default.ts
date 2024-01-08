@@ -21,14 +21,14 @@ export const outputLocationOption = new Option(
 
 export const searchLimitOption = new Option(
     "-l, --search-limit <Amount>",
-    "Number of search to make before downloading a track. More than 3 isn't recommanded."
+    "Number of search to make before downloading a track. More than 3 isn't recommanded"
 )
     .argParser(customParseInt)
-    .default(3, "first track")
+    .default(3, "first 3 track")
 
 export const sleepTimeOption = new Option(
     "-s, --sleep-time <Seconds>",
-    "Amount of seconds to wait in between each track to avoid getting limited. Changing it isn't recommanded."
+    "Amount of seconds to wait in between each track to avoid getting limited. Changing it isn't recommanded"
 )
     .argParser(customParseFloat)
     .default(30)

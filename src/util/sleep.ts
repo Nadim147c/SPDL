@@ -1,6 +1,7 @@
 import ora from "ora"
 
 export default function sleep(sleepMS: number, intervalMS = 100) {
+    if (sleepMS === 0) return
     if (intervalMS > 1000 && intervalMS < 50) throw "Interval must be between 50 to 1000"
 
     let remainingTime = sleepMS

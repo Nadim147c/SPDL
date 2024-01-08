@@ -65,17 +65,7 @@ const clearCacheCommand = program
     .addOption(tokensOption)
 
 export type ClearCacheAction = ActionType<typeof clearCacheCommand.action>
-clearCacheCommand.action((options) => {
-    const { all, images, tracks, albums, playlists } = options
-
-    if (!images && !tracks && !albums && !playlists && !all) {
-        console.log("[SPDL]", c.red("Please provide a option"))
-        const helpInfo = clearCacheCommand.helpInformation({ error: true })
-        console.log("[SPDL]", helpInfo)
-    } else {
-        clearCacheAction(options, clearCacheCommand)
-    }
-})
+clearCacheCommand.action(clearCacheAction)
 
 const urlArgument = new Argument("[url]", "URL of the track, playlist or album.")
 
